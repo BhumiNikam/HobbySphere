@@ -1,0 +1,13 @@
+# Make changes to code, then:
+git add .
+git commit -m "feat: Your feature description"
+git push
+
+# Pull latest changes (if working with team)
+git pull
+
+# Check status
+git status
+
+# View commit history
+git log --oneline
