@@ -48,7 +48,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(formData);
-      navigate('/feed');
+      navigate('/communities');
     } catch (err) {
       const message = err.response?.data?.message || 'Registration failed';
       toast.error(message);

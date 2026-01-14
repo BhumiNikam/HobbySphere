@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const postSchema = new mongoose.Schema({
   content: { type: String, required: true, maxlength: 2000 },
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', required: true }, // ADD THIS
   images: [{
     url: String,
     publicId: String

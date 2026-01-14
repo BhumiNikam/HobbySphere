@@ -1,13 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { X, Image } from 'lucide-react';
 import API from '../services/api';
 
-export default function PostForm({ onPostCreated }) {
+export default function PostForm({ onPostCreated, communityId = null }) {
+  const { user } = useContext(AuthContext);
   const [content, setContent] = useState('');
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedCommunity, setSelectedCommunity] = useState(communityId || '');
+  const [userCommunities, setUserCommunities] = useState([]);
+
+  useEffect(() => {
+    if (!communityId) {
+      fetchUserCommunities();
+    }
+  }, [communityId]);
+
+  const fetchUserCommunities = async () => {
+    try {
+      const res = await API.get('/communities');
+      console.log('Communities response:', res.data);
+      
+      // Backend returns { communities: [], total, page, pages }
+      const allCommunities = res.data.communities || res.data || [];
+      
+      // Filter only communities user is member of
+      const memberCommunities = allCommunities.filter(c => 
+        c.members && c.members.some(m => m.toString() === user._id || m === user._id)
+      );
+      
+      setUserCommunities(memberCommunities);
+    } catch (error) {
+      console.error('Failed to fetch communities:', error);
+      setUserCommunities([]);
+    }
+  };
 
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -18,7 +48,6 @@ export default function PostForm({ onPostCreated }) {
 
     setImages([...images, ...files]);
     
-    // Create previews
     files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -36,14 +65,25 @@ export default function PostForm({ onPostCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
+    
+    const finalCommunityId = communityId || selectedCommunity;
+    
+    if (!finalCommunityId) {
+      toast.error('Please select a community');
+      return;
+    }
 
     setLoading(true);
     try {
       const formData = new FormData();
       formData.append('content', content);
+      formData.append('communityId', finalCommunityId);
+      
       images.forEach(image => {
         formData.append('images', image);
       });
+
+      console.log('Submitting post with communityId:', finalCommunityId);
 
       const res = await API.post('/posts', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -52,9 +92,11 @@ export default function PostForm({ onPostCreated }) {
       setContent('');
       setImages([]);
       setPreviews([]);
+      setSelectedCommunity(communityId || '');
       onPostCreated(res.data);
       toast.success('Post created!');
     } catch (error) {
+      console.error('Post creation error:', error.response?.data);
       toast.error(error.response?.data?.message || 'Failed to create post');
     } finally {
       setLoading(false);
@@ -64,6 +106,30 @@ export default function PostForm({ onPostCreated }) {
   return (
     <div className="bg-white rounded-xl shadow-md p-6 mb-6">
       <form onSubmit={handleSubmit}>
+        {/* Community Selector - Only show if not on community page */}
+        {!communityId && (
+          <div className="mb-4">
+            <select
+              value={selectedCommunity}
+              onChange={(e) => setSelectedCommunity(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              required
+            >
+              <option value="">Select a community</option>
+              {userCommunities.map(community => (
+                <option key={community._id} value={community._id}>
+                  {community.name}
+                </option>
+              ))}
+            </select>
+            {userCommunities.length === 0 && (
+              <p className="text-sm text-gray-500 mt-2">
+                Join communities to start posting!
+              </p>
+            )}
+          </div>
+        )}
+
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}

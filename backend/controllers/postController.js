@@ -35,11 +35,14 @@ exports.createPost = async (req, res) => {
     const post = await Post.create({
       content,
       author: req.user._id,
+      community: req.body.communityId, // ✅ NEW - Required
       images,
       hashtags: hashtags.map(tag => tag.toLowerCase())
     });
 
-    const populatedPost = await Post.findById(post._id).populate('author', 'username fullName profileImage');
+    const populatedPost = await Post.findById(post._id)
+      .populate('author', 'username fullName profileImage')
+      .populate('community', 'name slug');
 
     res.status(201).json(populatedPost);
   } catch (error) {
@@ -47,21 +50,29 @@ exports.createPost = async (req, res) => {
   }
 };
 
-// Get feed (all posts)
+// Get feed (posts from user's joined communities)
 exports.getFeed = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
     const skip = (page - 1) * limit;
 
-    const posts = await Post.find()
+    // Get user's communities
+    const user = await User.findById(req.user._id);
+    console.log('User communities:', user.communities); // ADD THIS
+    // If user has no communities, return empty array
+    if (!user.communities || user.communities.length === 0) {
+      return res.json([]);
+    }
+
+    const posts = await Post.find({ community: { $in: user.communities } })
       .populate('author', 'username fullName profileImage')
+      .populate('community', 'name slug')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Post.countDocuments();
-
+    console.log('Found posts:', posts.length); // ADD THIS
     res.json(posts);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -80,7 +91,6 @@ exports.getFollowingFeed = async (req, res) => {
     // Include own posts + posts from following
     const authorIds = [...user.following, req.user._id];
 
-    // DEBUG - Remove after testing
     console.log('Following IDs:', user.following.length);
     console.log('Total author IDs:', authorIds.length);
 
@@ -90,7 +100,6 @@ exports.getFollowingFeed = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    // DEBUG - Remove after testing
     console.log('Following feed posts:', posts.length);
 
     const total = await Post.countDocuments({ author: { $in: authorIds } });
@@ -101,7 +110,7 @@ exports.getFollowingFeed = async (req, res) => {
   }
 };
 
-// Like post
+// ✅ FIXED: Like post with real-time socket events
 exports.likePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.postId);
@@ -110,15 +119,37 @@ exports.likePost = async (req, res) => {
     const index = post.likes.indexOf(req.user._id);
     const isLiking = index === -1;
 
+    // Get socket.io instance
+    const io = req.app.get('io');
+    const userSockets = req.app.get('userSockets');
+
     if (index > -1) {
+      // Unlike
       post.likes.splice(index, 1);
+      
+      // ✅ Emit unlike event to all connected clients
+      io.emit('post_unliked', {
+        postId: post._id,
+        userId: req.user._id,
+        likesCount: post.likes.length
+      });
+      
+      console.log('👎 Post unliked - emitting to all clients');
     } else {
+      // Like
       post.likes.push(req.user._id);
+
+      // ✅ Emit like event to all connected clients
+      io.emit('post_liked', {
+        postId: post._id,
+        userId: req.user._id,
+        likesCount: post.likes.length
+      });
+      
+      console.log('👍 Post liked - emitting to all clients');
 
       // Send notification (only when liking, not unliking)
       if (post.author.toString() !== req.user._id.toString()) {
-        const io = req.app.get('io');
-        const userSockets = req.app.get('userSockets');
         await createNotification(io, userSockets, {
           type: 'like',
           from: req.user._id,
@@ -131,6 +162,7 @@ exports.likePost = async (req, res) => {
     await post.save();
     res.json({ likes: post.likes.length, isLiked: isLiking });
   } catch (error) {
+    console.error('Like post error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -151,6 +183,14 @@ exports.deletePost = async (req, res) => {
     }
 
     await Post.findByIdAndDelete(req.params.postId);
+    
+    // ✅ Emit post deleted event
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('post_deleted', { postId: post._id });
+      console.log('🗑️ Post deleted - emitting to all clients');
+    }
+    
     res.json({ message: 'Post deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

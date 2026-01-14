@@ -6,42 +6,21 @@ import API from '../services/api';
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const [allNotifications, setAllNotifications] = useState([]);
-  const { notifications, setNotifications, unreadCount, setUnreadCount } = useSocket();
+  const { notifications, setNotifications, unreadCount, setUnreadCount, fetchNotifications } = useSocket();
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // 🔍 ADD DEBUG
-  console.log('🔔 NotificationBell render:', { 
-    unreadCount, 
-    notificationsLength: notifications.length,
-    allNotificationsLength: allNotifications.length 
-  });
-
   useEffect(() => {
-    fetchNotifications();
     requestNotificationPermission();
   }, []);
 
-  // ✅ FIX: Use notifications.length as dependency to trigger re-render
+  // ✅ FIXED: Sync with socket notifications
   useEffect(() => {
-    console.log('📬 New notifications received:', notifications);
-    
-    if (notifications.length > 0) {
-      setAllNotifications(prev => {
-        // Get the newest notification that's not already in the list
-        const newNotifs = notifications.filter(
-          n => !prev.some(p => p._id === n._id)
-        );
-        
-        if (newNotifs.length > 0) {
-          console.log('✅ Adding new notifications to list:', newNotifs);
-          return [...newNotifs, ...prev];
-        }
-        return prev;
-      });
-    }
-  }, [notifications, notifications.length]); // ✅ Add notifications.length as dependency
+    console.log('🔔 NotificationBell synced with socket:', { 
+      unreadCount, 
+      notificationsLength: notifications.length 
+    });
+  }, [notifications, unreadCount]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -59,24 +38,19 @@ export default function NotificationBell() {
     }
   };
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await API.get('/notifications');
-      setAllNotifications(res.data);
-      const unread = res.data.filter(n => !n.read).length;
-      setUnreadCount(unread);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    }
-  };
-
   const markAsRead = async (notificationId) => {
     try {
       await API.patch(`/notifications/${notificationId}/read`);
-      setAllNotifications(prev =>
+      
+      // Update local state
+      setNotifications(prev =>
         prev.map(n => n._id === notificationId ? { ...n, read: true } : n)
       );
+      
+      // Decrement unread count
       setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      console.log('✅ Marked notification as read:', notificationId);
     } catch (error) {
       console.error('Failed to mark as read:', error);
     }
@@ -85,8 +59,12 @@ export default function NotificationBell() {
   const markAllAsRead = async () => {
     try {
       await API.patch('/notifications/read-all');
-      setAllNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      
+      // Update all notifications to read
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
+      
+      console.log('✅ Marked all notifications as read');
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }
@@ -96,8 +74,19 @@ export default function NotificationBell() {
     e.stopPropagation();
     try {
       await API.delete(`/notifications/${notificationId}`);
-      setAllNotifications(prev => prev.filter(n => n._id !== notificationId));
+      
+      // Find if the deleted notification was unread
+      const deletedNotif = notifications.find(n => n._id === notificationId);
+      
+      // Remove from state
       setNotifications(prev => prev.filter(n => n._id !== notificationId));
+      
+      // Decrement unread count if it was unread
+      if (deletedNotif && !deletedNotif.read) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+      
+      console.log('🗑️ Deleted notification:', notificationId);
     } catch (error) {
       console.error('Failed to delete notification:', error);
     }
@@ -109,8 +98,10 @@ export default function NotificationBell() {
 
     if (notification.type === 'follow') {
       navigate(`/profile/${notification.from.username}`);
+    } else if (notification.type === 'message') {
+      navigate('/messages');
     } else if (notification.post) {
-      navigate('/');
+      navigate('/'); // Navigate to feed to see the post
     }
   };
 
@@ -119,6 +110,7 @@ export default function NotificationBell() {
       case 'follow': return <UserPlus size={18} className="text-blue-500" />;
       case 'like': return <Heart size={18} className="text-red-500" />;
       case 'comment': return <MessageCircle size={18} className="text-green-500" />;
+      case 'message': return <MessageCircle size={18} className="text-purple-500" />;
       default: return <Bell size={18} />;
     }
   };
@@ -129,6 +121,7 @@ export default function NotificationBell() {
       case 'follow': return `${name} started following you`;
       case 'like': return `${name} liked your post`;
       case 'comment': return `${name} commented on your post`;
+      case 'message': return `${name} sent you a message`;
       default: return 'New notification';
     }
   };
@@ -173,10 +166,10 @@ export default function NotificationBell() {
           </div>
 
           <div className="overflow-y-auto">
-            {allNotifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No notifications yet</p>
             ) : (
-              allNotifications.map(notif => (
+              notifications.map(notif => (
                 <div
                   key={notif._id}
                   onClick={() => handleNotificationClick(notif)}

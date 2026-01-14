@@ -2,7 +2,7 @@ const Comment = require('../models/Comment');
 const Post = require('../models/Post');
 const { createNotification } = require('../utils/notifications');
 
-// Add comment
+// ✅ FIXED: Add comment with real-time socket events
 exports.addComment = async (req, res) => {
   try {
     const { text } = req.body;
@@ -21,10 +21,22 @@ exports.addComment = async (req, res) => {
 
     const populatedComment = await Comment.findById(comment._id).populate('author', 'username fullName profileImage');
 
+    // Get socket.io instance
+    const io = req.app.get('io');
+    const userSockets = req.app.get('userSockets');
+
+    // ✅ Emit comment event to all connected clients
+    if (io) {
+      io.emit('post_commented', {
+        postId: postId,
+        comment: populatedComment,
+        commentsCount: post.commentCount + 1
+      });
+      console.log('💬 New comment - emitting to all clients');
+    }
+
     // Send notification (don't notify if commenting on own post)
     if (post.author.toString() !== req.user._id.toString()) {
-      const io = req.app.get('io');
-      const userSockets = req.app.get('userSockets');
       await createNotification(io, userSockets, {
         type: 'comment',
         from: req.user._id,
@@ -35,6 +47,7 @@ exports.addComment = async (req, res) => {
 
     res.status(201).json(populatedComment);
   } catch (error) {
+    console.error('Add comment error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -54,7 +67,7 @@ exports.getComments = async (req, res) => {
   }
 };
 
-// Delete comment
+// ✅ FIXED: Delete comment with real-time socket events
 exports.deleteComment = async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.commentId);
@@ -64,11 +77,23 @@ exports.deleteComment = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    await Post.findByIdAndUpdate(comment.post, { $inc: { commentCount: -1 } });
+    const post = await Post.findByIdAndUpdate(comment.post, { $inc: { commentCount: -1 } });
     await Comment.findByIdAndDelete(req.params.commentId);
+
+    // ✅ Emit comment deleted event
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('comment_deleted', {
+        postId: comment.post,
+        commentId: req.params.commentId,
+        commentsCount: post.commentCount - 1
+      });
+      console.log('🗑️ Comment deleted - emitting to all clients');
+    }
 
     res.json({ message: 'Comment deleted' });
   } catch (error) {
+    console.error('Delete comment error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

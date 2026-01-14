@@ -15,7 +15,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/feed');
+      navigate('/communities');
     } catch (err) {
       const message = err.response?.data?.message || 'Login failed';
       toast.error(message);

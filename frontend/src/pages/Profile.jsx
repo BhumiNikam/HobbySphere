@@ -95,7 +95,7 @@ export default function Profile() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">User not found</h2>
-          <button onClick={() => navigate('/feed')} className="text-indigo-600">Go back to feed</button>
+          <button onClick={() => navigate('/communities')} className="text-indigo-600">Go back to feed</button>
         </div>
       </div>
     );
@@ -109,7 +109,7 @@ export default function Profile() {
       {/* Navbar */}
       <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 onClick={() => navigate('/feed')} className="text-2xl font-bold text-indigo-600 cursor-pointer">🎨 HobbySphere</h1>
+          <h1 onClick={() => navigate('/communities')} className="text-2xl font-bold text-indigo-600 cursor-pointer">🎨 HobbySphere</h1>
         </div>
       </nav>
 
