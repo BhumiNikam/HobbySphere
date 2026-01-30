@@ -73,6 +73,23 @@ app.get('/', (req, res) => {
   res.json({ message: 'HobbySphere API running' });
 });
 
+// Test email route
+app.get("/test-email", async (req, res) => {
+  const { sendPasswordResetEmail } = require("./services/emailService");
+
+  try {
+    await sendPasswordResetEmail(
+      "aniketkasav07@gmail.com",
+      "Aniket",
+      "Hashed-07"
+    );
+    res.send("Email sent");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Email failed");
+  }
+});
+
 // Error handling
 app.use((err, req, res, next) => {
   console.error('Error:', err.message);

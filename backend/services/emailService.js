@@ -1,18 +1,19 @@
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
 
-// Create transporter using your working config
 const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+    pass: process.env.EMAIL_PASS, // ✅ FIXED
   },
 });
 
-// Verify connection
+// ✅ SHOW VERIFY ERRORS
 transporter.verify((error, success) => {
   if (error) {
-    // Email service error
+    console.error("❌ Email transporter error:", error);
+  } else {
+    console.log("✅ Email transporter is ready");
   }
 });
 
