@@ -1,203 +1,267 @@
-import { useState, useEffect, useRef } from 'react';
-import { Bell, Heart, MessageCircle, UserPlus, X } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Bell,
+  Heart,
+  MessageCircle,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const { notifications, setNotifications, unreadCount, setUnreadCount, fetchNotifications } = useSocket();
+  const [busyId, setBusyId] = useState(null);
+
+  const {
+    notifications,
+    setNotifications,
+    unreadCount,
+    setUnreadCount,
+  } = useSocket();
+
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
+  /* ================= PERMISSION ================= */
   useEffect(() => {
-    requestNotificationPermission();
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
-  // ✅ FIXED: Sync with socket notifications
-  useEffect(() => {
-    console.log('🔔 NotificationBell synced with socket:', { 
-      unreadCount, 
-      notificationsLength: notifications.length 
-    });
-  }, [notifications, unreadCount]);
-
+  /* ================= OUTSIDE CLICK ================= */
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () =>
+      document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const requestNotificationPermission = () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  };
-
-  const markAsRead = async (notificationId) => {
+  /* ================= ACTIONS ================= */
+  const markAsRead = useCallback(async (id) => {
     try {
-      await API.patch(`/notifications/${notificationId}/read`);
-      
-      // Update local state
-      setNotifications(prev =>
-        prev.map(n => n._id === notificationId ? { ...n, read: true } : n)
+      await API.patch(`/notifications/${id}/read`);
+
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n._id === id ? { ...n, read: true } : n
+        )
       );
-      
-      // Decrement unread count
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      
-      console.log('✅ Marked notification as read:', notificationId);
-    } catch (error) {
-      console.error('Failed to mark as read:', error);
+
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch {
+      console.error('Mark as read failed');
     }
-  };
+  }, [setNotifications, setUnreadCount]);
 
   const markAllAsRead = async () => {
     try {
       await API.patch('/notifications/read-all');
-      
-      // Update all notifications to read
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, read: true }))
+      );
       setUnreadCount(0);
-      
-      console.log('✅ Marked all notifications as read');
-    } catch (error) {
-      console.error('Failed to mark all as read:', error);
+    } catch {
+      console.error('Mark all failed');
     }
   };
 
-  const deleteNotification = async (notificationId, e) => {
+  const deleteNotification = async (id, e) => {
     e.stopPropagation();
+    if (busyId === id) return;
+
     try {
-      await API.delete(`/notifications/${notificationId}`);
-      
-      // Find if the deleted notification was unread
-      const deletedNotif = notifications.find(n => n._id === notificationId);
-      
-      // Remove from state
-      setNotifications(prev => prev.filter(n => n._id !== notificationId));
-      
-      // Decrement unread count if it was unread
-      if (deletedNotif && !deletedNotif.read) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
+      setBusyId(id);
+
+      const deleted = notifications.find((n) => n._id === id);
+
+      await API.delete(`/notifications/${id}`);
+      setNotifications((prev) =>
+        prev.filter((n) => n._id !== id)
+      );
+
+      if (deleted && !deleted.read) {
+        setUnreadCount((c) => Math.max(0, c - 1));
       }
-      
-      console.log('🗑️ Deleted notification:', notificationId);
-    } catch (error) {
-      console.error('Failed to delete notification:', error);
+    } catch {
+      console.error('Delete failed');
+    } finally {
+      setBusyId(null);
     }
   };
 
-  const handleNotificationClick = (notification) => {
-    markAsRead(notification._id);
+  const handleNotificationClick = (notif) => {
+    if (!notif.read) markAsRead(notif._id);
     setIsOpen(false);
 
-    if (notification.type === 'follow') {
-      navigate(`/profile/${notification.from.username}`);
-    } else if (notification.type === 'message') {
+    if (notif.type === 'follow') {
+      navigate(`/profile/${notif.from.username}`);
+    } else if (notif.type === 'message') {
       navigate('/messages');
-    } else if (notification.post) {
-      navigate('/'); // Navigate to feed to see the post
+    } else if (notif.post) {
+      navigate('/');
     }
   };
 
+  /* ================= HELPERS ================= */
   const getIcon = (type) => {
     switch (type) {
-      case 'follow': return <UserPlus size={18} className="text-blue-500" />;
-      case 'like': return <Heart size={18} className="text-red-500" />;
-      case 'comment': return <MessageCircle size={18} className="text-green-500" />;
-      case 'message': return <MessageCircle size={18} className="text-purple-500" />;
-      default: return <Bell size={18} />;
+      case 'follow':
+        return <UserPlus size={18} className="text-blue-500" />;
+      case 'like':
+        return <Heart size={18} className="text-red-500" />;
+      case 'comment':
+        return <MessageCircle size={18} className="text-green-500" />;
+      case 'message':
+        return <MessageCircle size={18} className="text-purple-500" />;
+      default:
+        return <Bell size={18} />;
     }
   };
 
-  const getText = (notification) => {
-    const name = notification.from?.fullName || 'Someone';
-    switch (notification.type) {
-      case 'follow': return `${name} started following you`;
-      case 'like': return `${name} liked your post`;
-      case 'comment': return `${name} commented on your post`;
-      case 'message': return `${name} sent you a message`;
-      default: return 'New notification';
+  const getText = (n) => {
+    const name = n.from?.fullName || 'Someone';
+    switch (n.type) {
+      case 'follow':
+        return `${name} started following you`;
+      case 'like':
+        return `${name} liked your post`;
+      case 'comment':
+        return `${name} commented on your post`;
+      case 'message':
+        return `${name} sent you a message`;
+      default:
+        return 'New notification';
     }
   };
 
   const formatDate = (date) => {
-    const now = new Date();
-    const posted = new Date(date);
-    const diff = Math.floor((now - posted) / 1000);
-
+    const diff = Math.floor((Date.now() - new Date(date)) / 1000);
     if (diff < 60) return 'Just now';
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
+  /* ================= UI ================= */
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* BELL */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition"
+        onClick={() => setIsOpen((p) => !p)}
+        className="relative p-2 rounded-full hover:bg-slate-100 transition"
+        aria-label="Notifications"
       >
-        <Bell size={24} />
+        <Bell size={22} />
+
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+          <span
+            className="
+              absolute -top-1 -right-1
+              h-5 w-5 text-[10px]
+              rounded-full
+              bg-gradient-to-r from-red-500 to-pink-500
+              text-white font-bold
+              flex items-center justify-center
+              shadow-md
+              animate-bounce-slow
+            "
+          >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
+      {/* DROPDOWN */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border z-50 max-h-[500px] overflow-hidden flex flex-col">
-          <div className="p-4 border-b flex items-center justify-between">
+        <div
+          className="
+            absolute right-0 mt-2
+            w-96 max-h-[520px]
+            bg-white rounded-2xl
+            shadow-xl border
+            overflow-hidden
+            z-50
+            animate-scale-in
+          "
+        >
+          {/* HEADER */}
+          <div className="flex items-center justify-between px-4 py-3 border-b">
             <h3 className="font-bold text-lg">Notifications</h3>
+
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-sm text-indigo-600 hover:text-indigo-700"
+                className="text-sm text-indigo-600 hover:underline"
               >
                 Mark all read
               </button>
             )}
           </div>
 
-          <div className="overflow-y-auto">
+          {/* LIST */}
+          <div className="overflow-y-auto max-h-[460px]">
             {notifications.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No notifications yet</p>
+              <div className="py-16 text-center text-slate-500">
+                <div className="text-3xl mb-3">🔔</div>
+                No notifications yet
+              </div>
             ) : (
-              notifications.map(notif => (
+              notifications.map((n) => (
                 <div
-                  key={notif._id}
-                  onClick={() => handleNotificationClick(notif)}
-                  className={`p-4 border-b hover:bg-gray-50 cursor-pointer transition ${
-                    !notif.read ? 'bg-blue-50' : ''
-                  }`}
+                  key={n._id}
+                  onClick={() => handleNotificationClick(n)}
+                  className={`
+                    px-4 py-3 cursor-pointer
+                    border-b last:border-b-0
+                    hover:bg-slate-50
+                    transition
+                    ${!n.read ? 'bg-indigo-50/60' : ''}
+                  `}
                 >
-                  <div className="flex gap-3 items-start">
+                  <div className="flex gap-3">
                     <img
-                      src={notif.from?.profileImage || `https://ui-avatars.com/api/?name=${notif.from?.username}&background=6366f1&color=fff`}
-                      alt={notif.from?.username}
-                      loading="lazy"
-                      className="w-10 h-10 object-cover rounded-full flex-shrink-0"
+                      src={
+                        n.from?.profileImage ||
+                        `https://ui-avatars.com/api/?name=${n.from?.username}`
+                      }
+                      alt={n.from?.username}
+                      className="w-10 h-10 rounded-full object-cover"
                     />
-                    
+
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2">
-                        {getIcon(notif.type)}
-                        <p className="text-sm flex-1">{getText(notif)}</p>
+                      <div className="flex gap-2 items-start">
+                        {getIcon(n.type)}
+                        <p className="text-sm flex-1 leading-snug">
+                          {getText(n)}
+                        </p>
+
                         <button
-                          onClick={(e) => deleteNotification(notif._id, e)}
-                          className="text-gray-400 hover:text-red-500 flex-shrink-0"
+                          disabled={busyId === n._id}
+                          onClick={(e) =>
+                            deleteNotification(n._id, e)
+                          }
+                          className="
+                            text-slate-400
+                            hover:text-red-500
+                            disabled:opacity-40
+                            transition
+                          "
                         >
-                          <X size={16} />
+                          <X size={14} />
                         </button>
                       </div>
-                      <span className="text-xs text-gray-500 mt-1 block">
-                        {formatDate(notif.createdAt)}
+
+                      <span className="text-xs text-slate-400 mt-1 block">
+                        {formatDate(n.createdAt)}
                       </span>
                     </div>
                   </div>

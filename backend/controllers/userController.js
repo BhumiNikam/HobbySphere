@@ -252,3 +252,33 @@ exports.removeCoverImage = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.getUserSuggestions = async (req, res) => {
+  try {
+    // 🔒 SAFETY CHECK
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const currentUserId = req.user._id;
+
+    // Users already followed
+    const currentUser = await User.findById(currentUserId).select('following');
+
+    const excludedIds = [
+      currentUserId,
+      ...(currentUser.following || [])
+    ];
+
+    const suggestions = await User.find({
+      _id: { $nin: excludedIds }
+    })
+      .select('username fullName profileImage')
+      .limit(5);
+
+    res.json(suggestions);
+  } catch (error) {
+    console.error('User suggestions error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

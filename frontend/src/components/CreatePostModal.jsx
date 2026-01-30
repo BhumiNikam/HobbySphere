@@ -1,0 +1,77 @@
+import { useEffect } from 'react';
+import { X } from 'lucide-react';
+import PostForm from './PostForm';
+
+export default function CreatePostModal({ onClose }) {
+
+  /* ================= PREVENT BACKGROUND SCROLL ================= */
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
+
+  /* ================= ESC KEY CLOSE ================= */
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      className="
+        fixed inset-0 z-50
+        bg-black/50 backdrop-blur-sm
+        flex items-center justify-center
+        p-4
+      "
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="
+          bg-white rounded-2xl
+          w-full max-w-xl
+          shadow-2xl
+          animate-scale-in
+          overflow-hidden
+        "
+      >
+        {/* ================= HEADER ================= */}
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Create Post
+          </h2>
+
+          <button
+            onClick={onClose}
+            className="
+              p-2 rounded-full
+              hover:bg-slate-100
+              transition
+              active:scale-95
+            "
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* ================= BODY ================= */}
+        <div className="px-6 py-5">
+          <PostForm
+            onPostCreated={() => {
+              onClose();
+              // 🔥 Best UX: parent feed already listens to custom event
+              // No hard refresh needed
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

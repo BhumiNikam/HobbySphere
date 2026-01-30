@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import ChatList from '../components/ChatList';
 import ChatWindow from '../components/ChatWindow';
 import { useSocket } from '../context/SocketContext';
+import { MessageCircle, X } from 'lucide-react';
 
 export default function Messages() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,7 +16,7 @@ export default function Messages() {
 
   useEffect(() => {
     fetchConversations();
-    
+
     const userId = searchParams.get('userId');
     if (userId) {
       openConversationWithUser(userId);
@@ -42,10 +44,12 @@ export default function Messages() {
     try {
       const { data } = await api.get(`/messages/conversations/${userId}`);
       setSelectedConversation(data);
-      
-      if (!conversations.find(c => c._id === data._id)) {
-        setConversations(prev => [data, ...prev]);
-      }
+
+      setConversations(prev =>
+        prev.some(c => c._id === data._id)
+          ? prev
+          : [data, ...prev]
+      );
     } catch (error) {
       console.error('Error opening conversation:', error);
     }
@@ -58,78 +62,105 @@ export default function Messages() {
   const markConversationAsRead = async (conversationId) => {
     try {
       await api.put(`/messages/conversations/${conversationId}/read`);
-      
       fetchUnreadMessageCount();
-      console.log('✅ Marked conversation as read, refreshed count');
     } catch (error) {
       console.error('Error marking as read:', error);
     }
   };
 
-  // ✅ FIXED: Handle both 'text' and 'content' properties
   const handleNewMessage = (conversationId, message) => {
-    // Get the message text from either property
     const messageText = message.text || message.content || '';
-    
-    console.log('📨 New message received:', { conversationId, message, messageText });
-    
-    setConversations(prev => 
-      prev.map(conv => 
-        conv._id === conversationId 
-          ? { 
-              ...conv, 
-              lastMessage: { 
-                text: messageText,  // ← Use the extracted text
-                sender: message.sender, 
-                createdAt: message.createdAt 
-              }, 
-              updatedAt: new Date() 
-            }
-          : conv
-      ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+
+    setConversations(prev =>
+      prev
+        .map(conv =>
+          conv._id === conversationId
+            ? {
+                ...conv,
+                lastMessage: {
+                  text: messageText,
+                  sender: message.sender,
+                  createdAt: message.createdAt,
+                },
+                updatedAt: new Date(),
+              }
+            : conv
+        )
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
     );
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-100">
+        <div className="spinner" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex bg-gray-50">
-      <div className={`w-full md:w-96 border-r bg-white ${selectedConversation ? 'hidden md:block' : 'block'}`}>
-        <div className="p-4 border-b">
-          <h1 className="text-2xl font-bold">Messages</h1>
+    <div className="h-[calc(100vh-64px)] w-screen flex bg-slate-100 overflow-hidden shadow-sm relative">
+      {/* Close Icon for overall messages */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute top-4 right-4 z-20 bg-white text-slate-400 hover:text-slate-700 p-2 rounded-full shadow transition"
+        title="Close messages"
+      >
+        <X size={24} />
+      </button>
+      {/* ================= SIDEBAR ================= */}
+      <aside
+        className={`w-full md:w-[360px] bg-white border-r border-slate-200 flex flex-col transition-all ${
+          selectedConversation ? 'hidden md:flex' : 'flex'
+        }`}
+      >
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-slate-200">
+          <h1 className="text-xl font-semibold">Messages</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {conversations.length} conversation
+            {conversations.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <ChatList 
-          conversations={conversations}
-          selectedConversation={selectedConversation}
-          onSelectConversation={handleSelectConversation}
-        />
-      </div>
 
-      <div className={`flex-1 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+        {/* Chat List */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <ChatList
+            conversations={conversations}
+            selectedConversation={selectedConversation}
+            onSelectConversation={handleSelectConversation}
+          />
+        </div>
+      </aside>
+
+      {/* ================= CHAT WINDOW ================= */}
+      <section
+        className={`flex-1 flex flex-col bg-white transition-all ${
+          !selectedConversation ? 'hidden md:flex' : 'flex'
+        }`}
+      >
         {selectedConversation ? (
-          <ChatWindow 
+          <ChatWindow
             conversation={selectedConversation}
             onNewMessage={handleNewMessage}
             onBack={() => setSelectedConversation(null)}
           />
         ) : (
-          <div className="flex items-center justify-center w-full">
-            <div className="text-center">
-              <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <h3 className="mt-4 text-lg font-medium text-gray-900">Select a conversation</h3>
-              <p className="mt-2 text-sm text-gray-500">Choose from your existing conversations or start a new one</p>
+          <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-50 to-indigo-50/40">
+            <div className="text-center px-6 w-full animate-fade-in">
+              <div className="mb-6 inline-flex p-5 rounded-full bg-indigo-100">
+                <MessageCircle size={42} className="text-indigo-600" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">
+                Your messages
+              </h3>
+              <p className="text-slate-500 text-sm">
+                Select a conversation or start chatting from a user’s profile
+              </p>
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

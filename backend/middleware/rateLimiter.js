@@ -1,49 +1,67 @@
 const rateLimit = require('express-rate-limit');
 
-// Check if in development mode
+/* ===============================
+   ENV CHECK
+================================ */
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-// General API rate limiter (very lenient for development)
+/* ===============================
+   COMMON CONFIG
+================================ */
+const commonOptions = {
+  standardHeaders: true,
+  legacyHeaders: false,
+};
+
+/* ===============================
+   GENERAL API LIMITER
+================================ */
 const apiLimiter = rateLimit({
+  ...commonOptions,
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 1000 : 100, // 1000 for dev, 100 for production
-  standardHeaders: true,
-  legacyHeaders: false,
+  max: isDevelopment ? 1000 : 150, // relaxed dev, safe prod
   handler: (req, res) => {
-    res.status(429).json({ 
+    res.status(429).json({
       message: 'Too many requests, please try again later',
-      retryAfter: Math.ceil(15 * 60)
+      retryAfter: 15 * 60, // seconds
     });
-  }
+  },
 });
 
-// Auth rate limiter (only for failed login attempts)
+/* ===============================
+   AUTH LIMITER (LOGIN / OTP)
+================================ */
 const authLimiter = rateLimit({
+  ...commonOptions,
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDevelopment ? 100 : 10, // 100 for dev, 10 for production
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true, // Don't count successful logins
+  max: isDevelopment ? 100 : 5, // strict in production
+  skipSuccessfulRequests: true,
   handler: (req, res) => {
-    res.status(429).json({ 
-      message: 'Too many login attempts, please try again in 15 minutes',
-      retryAfter: Math.ceil(15 * 60)
+    res.status(429).json({
+      message:
+        'Too many failed login attempts. Please try again after 15 minutes.',
+      retryAfter: 15 * 60,
     });
-  }
+  },
 });
 
-// Post creation rate limiter
+/* ===============================
+   POST CREATION LIMITER
+================================ */
 const postLimiter = rateLimit({
+  ...commonOptions,
   windowMs: 60 * 1000, // 1 minute
-  max: isDevelopment ? 50 : 10, // 50 for dev, 10 for production
-  standardHeaders: true,
-  legacyHeaders: false,
+  max: isDevelopment ? 50 : 5, // prevent spam
   handler: (req, res) => {
-    res.status(429).json({ 
-      message: 'Too many posts, please slow down!',
-      retryAfter: 60
+    res.status(429).json({
+      message: 'You are posting too fast. Please slow down.',
+      retryAfter: 60,
     });
-  }
+  },
 });
 
-module.exports = { apiLimiter, authLimiter, postLimiter };
+module.exports = {
+  apiLimiter,
+  authLimiter,
+  postLimiter,
+};

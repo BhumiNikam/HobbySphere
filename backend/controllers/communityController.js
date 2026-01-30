@@ -1,7 +1,22 @@
+exports.getCommunitySuggestions = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const communities = await Community.find({
+      members: { $ne: userId }
+    })
+      .sort({ memberCount: -1 })
+      .limit(5)
+      .select('name coverImage memberCount');
+
+    res.json(communities);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch communities' });
+  }
+};
 const Community = require('../models/Community');
 const User = require('../models/User');
 const Post = require('../models/Post');
-const Reel = require('../models/Reel');
 const cloudinary = require('../config/cloudinary');
 
 // Create community
@@ -363,5 +378,23 @@ exports.deleteCommunity = async (req, res) => {
   } catch (error) {
     console.error('Delete community error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.getSuggestedCommunities = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const communities = await Community.find({
+      members: { $ne: userId }
+    })
+      .sort({ memberCount: -1 })
+      .limit(5)
+      .select('name coverImage memberCount category');
+
+    res.json(communities);
+  } catch (error) {
+    console.error('Suggested communities error:', error);
+    res.status(500).json({ message: 'Failed to fetch suggestions' });
   }
 };

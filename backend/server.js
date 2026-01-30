@@ -38,11 +38,8 @@ app.use(helmet());
 const userSockets = new Map();
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
   socket.on('register', (userId) => {
     userSockets.set(userId, socket.id);
-    console.log(`User ${userId} registered with socket ${socket.id}`);
   });
 
   socket.on('disconnect', () => {
@@ -52,7 +49,6 @@ io.on('connection', (socket) => {
         break;
       }
     }
-    console.log('User disconnected:', socket.id);
   });
 });
 
@@ -65,7 +61,6 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/communities', require('./routes/communityRoutes'));
 app.use('/api/posts', require('./routes/postRoutes'));
 app.use('/api/posts', require('./routes/commentRoutes'));
-app.use('/api/reels', require('./routes/reelRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
@@ -87,9 +82,12 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-  console.log('404 - Route not found:', req.method, req.url);
   res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Server running on port ${PORT}`);
+  }
+});

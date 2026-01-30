@@ -6,7 +6,8 @@ const postSchema = new mongoose.Schema({
   community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', required: true }, // ADD THIS
   images: [{
     url: String,
-    publicId: String
+    publicId: String,
+    type: { type: String, enum: ['image', 'video'], default: 'image' }
   }],
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   commentCount: { type: Number, default: 0 },

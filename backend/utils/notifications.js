@@ -1,44 +1,68 @@
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
-const createNotification = async (io, userSockets, { type, from, to, post }) => {
+const createNotification = async (io, userSockets, { type, from, to, post, community }) => {
   try {
-    // Create notification object
+    console.log('🔔 Creating notification:', { type, from, to, post });
+
+    // Create notification object with proper _id
     const notification = {
+      _id: new mongoose.Types.ObjectId(),
       type,
       from,
       post: post || null,
+      community: community || null,
       read: false,
       createdAt: new Date()
     };
 
     // Add to user's notifications array
-    await User.findByIdAndUpdate(to, {
-      $push: { notifications: { $each: [notification], $position: 0, $slice: 50 } }
+    const updatedUser = await User.findByIdAndUpdate(
+      to,
+      {
+        $push: { 
+          notifications: { 
+            $each: [notification], 
+            $position: 0, 
+            $slice: 50 
+          } 
+        }
+      },
+      { new: true }
+    )
+    .select('notifications')
+    .populate({
+      path: 'notifications.from',
+      select: 'fullName username profileImage'
+    })
+    .populate({
+      path: 'notifications.post',
+      select: 'content images'
     });
 
-    // Get the updated user with populated notification
-    const updatedUser = await User.findById(to)
-      .select('notifications')
-      .populate('notifications.from', 'fullName username profileImage')
-      .populate('notifications.post', 'content images');
+    if (!updatedUser) {
+      console.error('❌ User not found:', to);
+      return null;
+    }
 
-    const populatedNotification = updatedUser.notifications[0]; // Get the newest one
+    // Get the newly created notification (first one)
+    const populatedNotification = updatedUser.notifications[0];
+    
+    console.log('✅ Notification created in DB:', populatedNotification._id);
 
     // Send real-time notification via Socket.io
     const socketId = userSockets.get(to.toString());
-    console.log(`🔔 Creating ${type} notification for user ${to}`);
-    console.log(`📡 User socket ID: ${socketId}`);
+    console.log(`📡 Looking for socket for user ${to}:`, socketId);
     
     if (socketId) {
       io.to(socketId).emit('notification', populatedNotification);
-      console.log('✅ Notification emitted successfully:', populatedNotification);
-    } else {
-      console.log('⚠️ User not connected, notification saved to DB only');
+
     }
 
     return populatedNotification;
   } catch (error) {
     console.error('❌ Notification creation error:', error);
+    return null;
   }
 };
 

@@ -1,0 +1,99 @@
+{
+  "nav": {
+    "home": "होम",
+    "following": "फॉलोइंग",
+    "reels": "रील्स",
+    "communities": "समुदाय",
+    "messages": "संदेश",
+    "profile": "प्रोफ़ाइल",
+    "logout": "लॉगआउट",
+    "create": "बनाएं",
+    "createPost": "पोस्ट बनाएं",
+    "createCommunity": "समुदाय बनाएं"
+  },
+  "post": {
+    "like": "पसंद",
+    "comment": "टिप्पणी",
+    "share": "शेयर",
+    "save": "सेव",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "whatOnMind": "आपके मन में क्या है?",
+    "writeComment": "एक टिप्पणी लिखें...",
+    "postCreated": "पोस्ट सफलतापूर्वक बनाया गया!",
+    "postDeleted": "पोस्ट सफलतापूर्वक हटाया गया!",
+    "justNow": "अभी",
+    "minutesAgo": "{{count}} मिनट पहले",
+    "hoursAgo": "{{count}} घंटे पहले",
+    "daysAgo": "{{count}} दिन पहले"
+  },
+  "profile": {
+    "posts": "पोस्ट",
+    "followers": "फॉलोअर्स",
+    "following": "फॉलोइंग",
+    "follow": "फॉलो करें",
+    "unfollow": "अनफॉलो करें",
+    "editProfile": "प्रोफ़ाइल संपादित करें",
+    "bio": "बायो",
+    "joinedOn": "शामिल हुए"
+  },
+  "community": {
+    "members": "सदस्य",
+    "join": "शामिल हों",
+    "leave": "छोड़ें",
+    "description": "विवरण",
+    "noPosts": "अभी तक कोई पोस्ट नहीं",
+    "createCommunity": "समुदाय बनाएं",
+    "communityName": "समुदाय का नाम",
+    "communityDescription": "समुदाय का विवरण"
+  },
+  "messages": {
+    "conversations": "बातचीत",
+    "typeMessage": "एक संदेश टाइप करें...",
+    "send": "भेजें",
+    "noMessages": "अभी तक कोई संदेश नहीं",
+    "startConversation": "बातचीत शुरू करें"
+  },
+  "auth": {
+    "login": "लॉगिन",
+    "register": "रजिस्टर",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "username": "यूज़रनेम",
+    "fullName": "पूरा नाम",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "dontHaveAccount": "खाता नहीं है?",
+    "alreadyHaveAccount": "पहले से खाता है?",
+    "resetPassword": "पासवर्ड रीसेट करें",
+    "newPassword": "नया पासवर्ड",
+    "confirmPassword": "पासवर्ड की पुष्टि करें"
+  },
+  "search": {
+    "searchPlaceholder": "खोजें...",
+    "noResults": "कोई परिणाम नहीं मिला",
+    "users": "उपयोगकर्ता",
+    "posts": "पोस्ट",
+    "communities": "समुदाय"
+  },
+  "notifications": {
+    "notifications": "सूचनाएं",
+    "noNotifications": "कोई सूचना नहीं",
+    "markAllRead": "सभी को पढ़ा हुआ चिह्नित करें"
+  },
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "cancel": "रद्द करें",
+    "save": "सेव करें",
+    "delete": "हटाएं",
+    "confirm": "पुष्टि करें",
+    "viewMore": "और देखें",
+    "viewLess": "कम देखें"
+  },
+  "sidebar": {
+    "trending": "ट्रेंडिंग हैशटैग",
+    "suggested": "सुझाए गए उपयोगकर्ता",
+    "suggestedCommunities": "सुझाए गए समुदाय"
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "nav": {
+    "home": "Home",
+    "following": "Following",
+    "reels": "Reels",
+    "communities": "Communities",
+    "messages": "Messages",
+    "profile": "Profile",
+    "logout": "Logout",
+    "create": "Create",
+    "createPost": "Create Post",
+    "createCommunity": "Create Community"
+  },
+  "post": {
+    "like": "Like",
+    "comment": "Comment",
+    "share": "Share",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "whatOnMind": "What's on your mind?",
+    "writeComment": "Write a comment...",
+    "postCreated": "Post created successfully!",
+    "postDeleted": "Post deleted successfully!",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago"
+  },
+  "profile": {
+    "posts": "Posts",
+    "followers": "Followers",
+    "following": "Following",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "editProfile": "Edit Profile",
+    "bio": "Bio",
+    "joinedOn": "Joined on"
+  },
+  "community": {
+    "members": "Members",
+    "join": "Join",
+    "leave": "Leave",
+    "description": "Description",
+    "noPosts": "No posts yet",
+    "createCommunity": "Create Community",
+    "communityName": "Community Name",
+    "communityDescription": "Community Description"
+  },
+  "messages": {
+    "conversations": "Conversations",
+    "typeMessage": "Type a message...",
+    "send": "Send",
+    "noMessages": "No messages yet",
+    "startConversation": "Start a conversation"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "fullName": "Full Name",
+    "forgotPassword": "Forgot Password?",
+    "dontHaveAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "resetPassword": "Reset Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password"
+  },
+  "search": {
+    "searchPlaceholder": "Search...",
+    "noResults": "No results found",
+    "users": "Users",
+    "posts": "Posts",
+    "communities": "Communities"
+  },
+  "notifications": {
+    "notifications": "Notifications",
+    "noNotifications": "No notifications",
+    "markAllRead": "Mark all as read"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "viewMore": "View More",
+    "viewLess": "View Less"
+  },
+  "sidebar": {
+    "trending": "Trending Hashtags",
+    "suggested": "Suggested Users",
+    "suggestedCommunities": "Suggested Communities"
+  }
+}

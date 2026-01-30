@@ -1,3 +1,549 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ======================================================
+   BASE LAYER – DESIGN TOKENS
+   ====================================================== */
+@layer base {
+  :root {
+    /* Radius */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
+
+    /* Shadows - Layered System */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.10);
+    --shadow-2xl: 0 24px 56px rgba(0, 0, 0, 0.12);
+    
+    /* Color shadows */
+    --shadow-indigo: 0 8px 24px rgba(99, 102, 241, 0.15);
+    --shadow-purple: 0 8px 24px rgba(139, 92, 246, 0.15);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Add this new dark mode section */
+  .dark {
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::selection {
+    @apply bg-indigo-100 text-indigo-900;
+  }
+}
+
+/* ======================================================
+   COMPONENTS – DESIGN SYSTEM
+   ====================================================== */
+@layer components {
+
+  /* -------------------- TYPOGRAPHY -------------------- */
+  .heading-display {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900;
+  }
+
+  .heading-xl {
+    @apply text-3xl md:text-4xl font-bold tracking-tight text-slate-900;
+  }
+
+  .heading-lg {
+    @apply text-2xl md:text-3xl font-bold text-slate-900;
+  }
+
+  .heading-md {
+    @apply text-xl md:text-2xl font-semibold text-slate-900;
+  }
+
+  .heading-sm {
+    @apply text-lg font-semibold text-slate-900;
+  }
+
+  .body-lg {
+    @apply text-base md:text-lg text-slate-700 leading-relaxed;
+  }
+
+  .text-muted {
+    @apply text-sm text-slate-500;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent;
+  }
+
+  /* -------------------- CARDS -------------------- */
+  .card {
+    @apply bg-white rounded-xl border border-slate-200/60;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-smooth);
+  }
+
+  .card-hover {
+    @apply hover:border-slate-300/80;
+    box-shadow: var(--shadow-md);
+  }
+
+  .card:hover.card-hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer;
+    transition: all var(--transition-base);
+  }
+
+  .card-interactive:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+  }
+
+  .card-interactive:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Glass Effects - Hierarchical */
+  .glass-subtle {
+    @apply bg-white/60 backdrop-blur-sm border border-white/80;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/60;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .glass-strong {
+    @apply bg-white/90 backdrop-blur-xl border border-white/50;
+    box-shadow: var(--shadow-md);
+  }
+
+  .glass-dark {
+    @apply bg-slate-900/90 text-white border border-slate-700/50 backdrop-blur-xl;
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* -------------------- BUTTONS -------------------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl
+           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-2.5
+           hover:from-indigo-700 hover:to-indigo-600 focus:ring-indigo-500;
+    box-shadow: var(--shadow-indigo);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 12px 32px rgba(99, 102, 241, 0.25);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-slate-700 px-6 py-2.5 border border-slate-200
+           hover:bg-slate-50 hover:border-slate-300 focus:ring-slate-300;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .btn-ghost {
+    @apply btn px-4 py-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  .btn-icon {
+    @apply p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900
+           transition-all duration-150 focus:outline-none;
+  }
+
+  .btn-icon-lg {
+    @apply p-3 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900
+           transition-all duration-150;
+  }
+
+  /* -------------------- INPUTS -------------------- */
+  .input {
+    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-xl
+           text-slate-900 placeholder:text-slate-400
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400;
+  }
+
+  .input-lg {
+    @apply input text-lg py-3.5;
+  }
+
+  .textarea {
+    @apply input resize-none;
+  }
+
+  /* -------------------- NAVIGATION -------------------- */
+  .nav-link {
+    @apply flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-slate-600
+           transition-all duration-200 hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  .nav-link.active {
+    @apply bg-indigo-50 text-indigo-600 font-semibold;
+  }
+
+  .nav-link:hover:not(.active) {
+    @apply bg-slate-100;
+  }
+
+  /* -------------------- AVATARS -------------------- */
+  .avatar {
+    @apply rounded-full object-cover border-2 border-white;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .avatar-ring {
+    @apply avatar ring-2 ring-indigo-500 ring-offset-2;
+  }
+
+  .avatar-gradient {
+    @apply bg-gradient-to-br from-indigo-500 to-purple-600
+           text-white font-bold flex items-center justify-center rounded-full
+           border-2 border-white;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* -------------------- BADGES -------------------- */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full;
+  }
+
+  .badge-primary {
+    @apply badge bg-indigo-100 text-indigo-700 border border-indigo-200/60;
+  }
+
+  .badge-success {
+    @apply badge bg-emerald-100 text-emerald-700 border border-emerald-200/60;
+  }
+
+  .badge-warning {
+    @apply badge bg-amber-100 text-amber-700 border border-amber-200/60;
+  }
+
+  .badge-error {
+    @apply badge bg-red-100 text-red-700 border border-red-200/60;
+  }
+
+  /* -------------------- MODALS -------------------- */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm
+           flex items-center justify-center z-50 p-4
+           animate-fade-in;
+  }
+
+  .modal {
+    @apply bg-white rounded-2xl w-full max-w-md p-6
+           animate-scale-in;
+    box-shadow: var(--shadow-2xl);
+  }
+
+  .modal-lg {
+    @apply modal max-w-2xl;
+  }
+
+  /* -------------------- DROPDOWNS -------------------- */
+  .dropdown {
+    @apply absolute mt-2 bg-white rounded-xl border border-slate-200
+           py-1 min-w-[200px] animate-scale-in z-50;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .dropdown-item {
+    @apply flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700
+           hover:bg-slate-50 transition-colors cursor-pointer;
+  }
+
+  /* -------------------- SKELETONS -------------------- */
+  .skeleton {
+    @apply bg-slate-200 rounded animate-pulse;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full;
+  }
+
+  .skeleton-avatar {
+    @apply skeleton w-12 h-12 rounded-full;
+  }
+
+  /* -------------------- IMAGES -------------------- */
+  .image-container {
+    @apply relative overflow-hidden rounded-xl bg-slate-100;
+  }
+
+  .image-container img {
+    @apply w-full h-full object-cover transition-transform duration-300;
+  }
+
+  .image-container:hover img {
+    @apply scale-105;
+  }
+
+  .image-overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-black/50 to-transparent
+           opacity-0 transition-opacity duration-300;
+  }
+
+  .image-container:hover .image-overlay {
+    @apply opacity-100;
+  }
+
+  /* -------------------- DIVIDERS -------------------- */
+  .divider {
+    @apply w-full h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-6;
+  }
+
+  .divider-vertical {
+    @apply h-full w-px bg-gradient-to-b from-transparent via-slate-200 to-transparent mx-4;
+  }
+
+  /* -------------------- STATS -------------------- */
+  .stat-number {
+    @apply text-2xl font-bold text-slate-900;
+  }
+
+  .stat-label {
+    @apply text-sm text-slate-500 font-medium;
+  }
+
+  /* -------------------- EMPTY STATES -------------------- */
+  .empty-state {
+    @apply text-center py-16;
+  }
+
+  .empty-state-icon {
+    @apply mx-auto w-16 h-16 mb-4 text-slate-300;
+  }
+
+  /* -------------------- LOADING -------------------- */
+  .spinner {
+    @apply w-10 h-10 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin;
+  }
+
+  .spinner-sm {
+    @apply spinner w-5 h-5 border-2;
+  }
+}
+
+/* ======================================================
+   ANIMATIONS
+   ====================================================== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ======================================================
+   UTILITIES
+   ====================================================== */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.4s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  /* Shadows */
+  .shadow-soft {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-medium {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-strong {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .shadow-colored-indigo {
+    box-shadow: var(--shadow-indigo);
+  }
+
+  .shadow-colored-purple {
+    box-shadow: var(--shadow-purple);
+  }
+
+  /* Scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(203 213 225);
+    border-radius: 10px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(148 163 184);
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ======================================================
+   CUSTOM UTILITIES FOR MESSAGES & REELS
+   ====================================================== */
+@layer components {
+  /* Message Bubbles */
+  .message-bubble {
+    @apply px-4 py-2.5 rounded-2xl max-w-sm break-words;
+    transition: all var(--transition-base);
+  }
+
+  .message-bubble-sent {
+    @apply message-bubble bg-indigo-600 text-white rounded-br-md;
+  }
+
+  .message-bubble-received {
+    @apply message-bubble bg-white border border-slate-200 text-slate-900 rounded-bl-md;
+  }
+
+  /* Chat List Items */
+  .chat-item {
+    @apply flex items-center gap-3 p-3 rounded-xl cursor-pointer
+           transition-all duration-200 hover:bg-slate-50;
+  }
+
+  .chat-item.active {
+    @apply bg-indigo-50;
+  }
+
+  .chat-item-unread {
+    @apply relative;
+  }
+
+  .chat-item-unread::after {
+    content: '';
+    @apply absolute right-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-indigo-600 rounded-full;
+  }
+
+  /* Reel Controls */
+  .reel-control {
+    @apply p-2.5 rounded-full bg-black/40 backdrop-blur-sm text-white
+           transition-all duration-200 hover:bg-black/60 hover:scale-110;
+  }
+
+  .reel-action-button {
+    @apply flex flex-col items-center gap-1 text-white;
+  }
+
+  .reel-action-icon {
+    @apply p-3 rounded-full bg-white/10 backdrop-blur-sm
+           transition-all duration-200 hover:bg-white/20 hover:scale-110;
+  }
+}

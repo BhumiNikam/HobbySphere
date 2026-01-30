@@ -5,13 +5,15 @@ const {
   followUser, 
   updateProfile,
   getFollowers,
-  getFollowing
+  getFollowing,
+  getUserSuggestions
 } = require('../controllers/userController');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 const router = express.Router();
 
+router.get('/suggestions', auth, getUserSuggestions);
 router.get('/:username', auth, getProfile);
 router.get('/:username/posts', auth, getUserPosts);
 router.get('/:username/followers', auth, getFollowers); // ADD

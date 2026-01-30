@@ -36,6 +36,12 @@ const userSchema = new mongoose.Schema({
   website: { type: String, default: '' },
   location: { type: String, default: '' },
   
+  // Guest user flag
+  isGuest: {
+    type: Boolean,
+    default: false
+  },
+  
   // Notifications (updated to include community notifications)
   notifications: [{
     type: { 

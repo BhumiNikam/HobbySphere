@@ -3,46 +3,70 @@ const User = require('../models/User');
 const cloudinary = require('../config/cloudinary');
 const { createNotification } = require('../utils/notifications');
 
-// Create post
+/* =====================================================
+   CREATE POST
+===================================================== */
 exports.createPost = async (req, res) => {
   try {
-    const { content } = req.body;
-    const images = [];
+    const { content, communityId } = req.body;
 
-    // Upload images to Cloudinary
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const result = await new Promise((resolve, reject) => {
-          cloudinary.uploader.upload_stream(
-            { folder: 'hobbysphere' },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          ).end(file.buffer);
-        });
-
-        images.push({
-          url: result.secure_url,
-          publicId: result.public_id
-        });
-      }
+    if (!content?.trim()) {
+      return res.status(400).json({ message: 'Post content is required' });
     }
 
-    // Extract hashtags
-    const hashtags = content.match(/#\w+/g) || [];
+    if (!communityId) {
+      return res.status(400).json({ message: 'Community is required' });
+    }
+
+    /* ===== UPLOAD MEDIA ===== */
+    const images = [];
+
+    if (req.files?.length) {
+      const uploads = req.files.map(
+        (file) =>
+          new Promise((resolve, reject) => {
+            const isVideo = file.mimetype.startsWith('video/');
+            cloudinary.uploader
+              .upload_stream({ 
+                folder: 'hobbysphere',
+                resource_type: isVideo ? 'video' : 'image'
+              }, (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+              })
+              .end(file.buffer);
+          })
+      );
+
+      const results = await Promise.all(uploads);
+
+      results.forEach((r) =>
+        images.push({ 
+          url: r.secure_url, 
+          publicId: r.public_id,
+          type: r.resource_type // 'image' or 'video'
+        })
+      );
+    }
+
+    /* ===== HASHTAGS ===== */
+    const hashtags = content.match(/#([\w-]+)/g) || [];
 
     const post = await Post.create({
       content,
       author: req.user._id,
-      community: req.body.communityId, // ✅ NEW - Required
+      community: communityId,
       images,
-      hashtags: hashtags.map(tag => tag.toLowerCase())
+      hashtags: hashtags.map((t) => t.toLowerCase()),
     });
 
     const populatedPost = await Post.findById(post._id)
       .populate('author', 'username fullName profileImage')
       .populate('community', 'name slug');
+
+    /* ===== SOCKET ===== */
+    const io = req.app.get('io');
+    io?.emit('post_created', populatedPost);
 
     res.status(201).json(populatedPost);
   } catch (error) {
@@ -50,124 +74,149 @@ exports.createPost = async (req, res) => {
   }
 };
 
-// Get feed (posts from user's joined communities)
+/* =====================================================
+   COMMUNITY FEED
+===================================================== */
 exports.getFeed = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = 10;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Get user's communities
-    const user = await User.findById(req.user._id);
-    console.log('User communities:', user.communities); // ADD THIS
-    // If user has no communities, return empty array
-    if (!user.communities || user.communities.length === 0) {
-      return res.json([]);
+    const user = await User.findById(req.user._id).select('communities');
+
+    if (!user.communities?.length) {
+      return res.json({ posts: [], hasMore: false });
     }
 
-    const posts = await Post.find({ community: { $in: user.communities } })
-      .populate('author', 'username fullName profileImage')
-      .populate('community', 'name slug')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const [posts, total] = await Promise.all([
+      Post.find({ community: { $in: user.communities } })
+        .populate('author', 'username fullName profileImage')
+        .populate('community', 'name slug')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Post.countDocuments({ community: { $in: user.communities } }),
+    ]);
 
-    console.log('Found posts:', posts.length); // ADD THIS
-    res.json(posts);
+    res.json({
+      posts,
+      hasMore: skip + posts.length < total,
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// Get following feed (only posts from users you follow)
+/* =====================================================
+   FOLLOWING FEED
+===================================================== */
 exports.getFollowingFeed = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = 10;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 5;
     const skip = (page - 1) * limit;
 
-    const user = await User.findById(req.user._id);
-    
-    // Include own posts + posts from following
-    const authorIds = [...user.following, req.user._id];
+    const user = await User.findById(req.user._id).select('following');
 
-    console.log('Following IDs:', user.following.length);
-    console.log('Total author IDs:', authorIds.length);
+    if (!user.following?.length) {
+      return res.json({ posts: [], hasMore: false });
+    }
 
-    const posts = await Post.find({ author: { $in: authorIds } })
-      .populate('author', 'username fullName profileImage')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const [posts, total] = await Promise.all([
+      Post.find({ author: { $in: user.following } })
+        .populate('author', 'username fullName profileImage')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Post.countDocuments({ author: { $in: user.following } }),
+    ]);
 
-    console.log('Following feed posts:', posts.length);
-
-    const total = await Post.countDocuments({ author: { $in: authorIds } });
-
-    res.json(posts);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.json({
+      posts,
+      hasMore: skip + posts.length < total,
+    });
+  } catch {
+    res.status(500).json({ message: 'Failed to load feed' });
   }
 };
 
-// ✅ FIXED: Like post with real-time socket events
+/* =====================================================
+   LIKE / UNLIKE POST
+===================================================== */
 exports.likePost = async (req, res) => {
   try {
+    const userId = req.user._id;
+
     const post = await Post.findById(req.params.postId);
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
 
-    const index = post.likes.indexOf(req.user._id);
-    const isLiking = index === -1;
-
-    // Get socket.io instance
     const io = req.app.get('io');
     const userSockets = req.app.get('userSockets');
 
-    if (index > -1) {
-      // Unlike
-      post.likes.splice(index, 1);
-      
-      // ✅ Emit unlike event to all connected clients
-      io.emit('post_unliked', {
+    const alreadyLiked = post.likes.some(
+      (id) => id.toString() === userId.toString()
+    );
+
+    if (alreadyLiked) {
+      // UNLIKE
+      post.likes.pull(userId);
+      await post.save();
+
+      // Emit unlike event
+      io?.emit('post_unliked', {
         postId: post._id,
-        userId: req.user._id,
-        likesCount: post.likes.length
+        userId: userId.toString(),
+        likesCount: post.likes.length,
       });
-      
-      console.log('👎 Post unliked - emitting to all clients');
+
+      return res.json({
+        likes: post.likes,
+        isLiked: false,
+      });
     } else {
-      // Like
-      post.likes.push(req.user._id);
+      // LIKE
+      post.likes.addToSet(userId);
+      await post.save();
 
-      // ✅ Emit like event to all connected clients
-      io.emit('post_liked', {
+      // Emit like event
+      io?.emit('post_liked', {
         postId: post._id,
-        userId: req.user._id,
-        likesCount: post.likes.length
+        userId: userId.toString(),
+        likesCount: post.likes.length,
       });
-      
-      console.log('👍 Post liked - emitting to all clients');
 
-      // Send notification (only when liking, not unliking)
-      if (post.author.toString() !== req.user._id.toString()) {
+      // Create notification (don't notify self)
+      if (post.author.toString() !== userId.toString()) {
         await createNotification(io, userSockets, {
           type: 'like',
-          from: req.user._id,
+          from: userId,
           to: post.author,
-          post: post._id
+          post: post._id,
         });
       }
-    }
 
-    await post.save();
-    res.json({ likes: post.likes.length, isLiked: isLiking });
+      return res.json({
+        likes: post.likes,
+        isLiked: true,
+      });
+    }
   } catch (error) {
-    console.error('Like post error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('❌ Like error:', error);
+    res.status(500).json({
+      message: 'Server error',
+      error: error.message,
+    });
   }
 };
 
-// Delete post
+/* =====================================================
+   DELETE POST
+===================================================== */
 exports.deletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.postId);
@@ -177,20 +226,17 @@ exports.deletePost = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // Delete images from Cloudinary
-    for (const image of post.images) {
-      await cloudinary.uploader.destroy(image.publicId);
-    }
+    await Promise.all(
+      post.images.map((img) =>
+        cloudinary.uploader.destroy(img.publicId).catch(() => {})
+      )
+    );
 
-    await Post.findByIdAndDelete(req.params.postId);
-    
-    // ✅ Emit post deleted event
+    await Post.findByIdAndDelete(post._id);
+
     const io = req.app.get('io');
-    if (io) {
-      io.emit('post_deleted', { postId: post._id });
-      console.log('🗑️ Post deleted - emitting to all clients');
-    }
-    
+    io?.emit('post_deleted', { postId: post._id });
+
     res.json({ message: 'Post deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

@@ -1,37 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { ArrowLeft, Send, Image as ImageIcon, X } from 'lucide-react';
 import api from '../services/api';
 
 export default function ChatWindow({ conversation, onNewMessage, onBack }) {
   const { user } = useAuth();
   const { socket } = useSocket();
+
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const userId = user._id || user.id;
   const otherUser = conversation.participants.find(p => p._id !== userId);
 
-  // Fetch messages when conversation changes
+  /* ================= FETCH + SOCKET ================= */
   useEffect(() => {
     fetchMessages();
     markAsRead();
   }, [conversation._id]);
 
-  // Setup socket listener
   useEffect(() => {
-    if (!socket) {
-      console.log('Socket not connected yet');
-      return;
-    }
+    if (!socket) return;
 
     const handleIncomingMessage = ({ conversationId, message }) => {
-      console.log('Incoming message:', { conversationId, message });
       if (conversationId === conversation._id) {
         setMessages(prev => [...prev, message]);
         markAsRead();
@@ -39,28 +37,21 @@ export default function ChatWindow({ conversation, onNewMessage, onBack }) {
     };
 
     socket.on('newMessage', handleIncomingMessage);
-    console.log('Socket listener registered for conversation:', conversation._id);
-
-    return () => {
-      socket.off('newMessage', handleIncomingMessage);
-      console.log('Socket listener removed');
-    };
+    return () => socket.off('newMessage', handleIncomingMessage);
   }, [socket, conversation._id]);
 
-  // Auto-scroll when messages change
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  /* ================= API ================= */
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get(`/messages/conversations/${conversation._id}/messages`);
-      console.log('Fetched messages:', data);
+      const { data } = await api.get(
+        `/messages/conversations/${conversation._id}/messages`
+      );
       setMessages(data.messages || data);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      alert('Failed to load messages');
     } finally {
       setLoading(false);
     }
@@ -69,30 +60,25 @@ export default function ChatWindow({ conversation, onNewMessage, onBack }) {
   const markAsRead = async () => {
     try {
       await api.put(`/messages/conversations/${conversation._id}/read`);
-    } catch (error) {
-      console.error('Error marking as read:', error);
-    }
+    } catch {}
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  /* ================= IMAGE ================= */
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image must be less than 5MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB');
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
   };
 
+  /* ================= SEND ================= */
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if ((!newMessage.trim() && !imagePreview) || sending) return;
@@ -103,100 +89,104 @@ export default function ChatWindow({ conversation, onNewMessage, onBack }) {
       if (newMessage.trim()) payload.text = newMessage.trim();
       if (imagePreview) payload.image = imagePreview;
 
-      console.log('Sending message:', payload);
-      const { data } = await api.post(`/messages/conversations/${conversation._id}/messages`, payload);
-      
-      console.log('Message sent:', data);
+      const { data } = await api.post(
+        `/messages/conversations/${conversation._id}/messages`,
+        payload
+      );
+
       setMessages(prev => [...prev, data]);
       onNewMessage(conversation._id, data);
       setNewMessage('');
       setImagePreview(null);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      alert(error.response?.data?.message || 'Failed to send message');
     } finally {
       setSending(false);
     }
   };
 
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+  const formatTime = (date) =>
+    new Date(date).toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
     });
-  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex-1 flex items-center justify-center bg-white">
+        <div className="spinner" />
       </div>
     );
   }
 
+  /* ================= UI ================= */
   return (
-    <div className="flex flex-col w-full h-screen">
-      {/* Header */}
-      <div className="p-4 border-b bg-white flex items-center gap-3">
-        <button onClick={onBack} className="md:hidden">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <img
-          src={otherUser.profileImage || `https://ui-avatars.com/api/?name=${otherUser.fullName}&background=random`}
-          alt={otherUser.fullName}
-          className="w-10 h-10 rounded-full object-cover"
-        />
-        <div>
-          <h2 className="font-semibold">{otherUser.fullName}</h2>
-          <p className="text-sm text-gray-500">@{otherUser.username}</p>
+    <div className="flex flex-col h-full bg-white">
+
+      {/* HEADER */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b px-4 py-3 flex items-center gap-3 justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="md:hidden text-slate-600">
+            <ArrowLeft size={20} />
+          </button>
+
+          <img
+            src={otherUser.profileImage}
+            className="w-10 h-10 rounded-full object-cover"
+          />
+
+          <div className="min-w-0">
+            <p className="font-semibold truncate">{otherUser.fullName}</p>
+            <p className="text-xs text-slate-500">@{otherUser.username}</p>
+          </div>
         </div>
+        <button onClick={onBack} className="text-slate-400 hover:text-slate-700 p-1 rounded-full transition ml-2">
+          <X size={22} />
+        </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      {/* MESSAGES */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 bg-gradient-to-b from-slate-50 to-white">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500">
-            <p>No messages yet. Start the conversation!</p>
+          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+            Start the conversation 👋
           </div>
         ) : (
-          messages.map((message) => {
-            const isOwn = message.sender._id === userId || message.sender === userId;
-            // ✅ ADD THIS DEBUG LINE
-            console.log('Message object:', message);
-            console.log('Message type:', message.messageType);
-            console.log('Message text:', message.text);
-            console.log('Message content:', message.content);
-            // ✅ FIXED: Get message text from either 'text' or 'content' property
-            const messageText = message.text || message.content;
-            const isStoryReaction = message.messageType === 'story_reaction';
-            
+          messages.map((msg) => {
+            const isOwn =
+              msg.sender === userId || msg.sender?._id === userId;
+
             return (
-              <div key={message._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-xs lg:max-w-md ${isOwn ? 'order-2' : 'order-1'}`}>
-                  {message.image && (
+              <div
+                key={msg._id}
+                className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className="max-w-[75%] space-y-1">
+                  {msg.image && (
                     <img
-                      src={message.image}
-                      alt="Message attachment"
-                      className="rounded-lg mb-1 max-w-full cursor-pointer hover:opacity-90"
-                      onClick={() => window.open(message.image, '_blank')}
+                      src={msg.image}
+                      className="rounded-2xl shadow-md max-w-full cursor-pointer hover:scale-[1.02] transition"
+                      onClick={() => window.open(msg.image, '_blank')}
                     />
                   )}
-                  {messageText && (
-                    <div className={`px-4 py-2 rounded-2xl ${
-                      isStoryReaction 
-                        ? 'bg-purple-100 text-purple-900 border border-purple-300' 
-                        : isOwn 
-                          ? 'bg-blue-500 text-white' 
-                          : 'bg-white text-gray-900'
-                    }`}>
-                      <p className="break-words">{messageText}</p>
+
+                  {msg.text && (
+                    <div
+                      className={`
+                        px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+                        ${isOwn
+                          ? 'bg-indigo-600 text-white rounded-br-md'
+                          : 'bg-white border rounded-bl-md'}
+                      `}
+                    >
+                      {msg.text}
                     </div>
                   )}
-                  <p className={`text-xs text-gray-500 mt-1 ${isOwn ? 'text-right' : 'text-left'}`}>
-                    {formatTime(message.createdAt)}
+
+                  <p
+                    className={`text-xs text-slate-400 ${
+                      isOwn ? 'text-right' : ''
+                    }`}
+                  >
+                    {formatTime(msg.createdAt)}
                   </p>
                 </div>
               </div>
@@ -206,64 +196,55 @@ export default function ChatWindow({ conversation, onNewMessage, onBack }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Image Preview */}
+      {/* IMAGE PREVIEW */}
       {imagePreview && (
-        <div className="p-4 bg-white border-t">
+        <div className="border-t p-3 bg-slate-50">
           <div className="relative inline-block">
-            <img src={imagePreview} alt="Preview" className="h-20 rounded" />
+            <img src={imagePreview} className="h-24 rounded-xl shadow-md" />
             <button
               onClick={() => setImagePreview(null)}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+              className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X size={14} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Input */}
-      <form onSubmit={handleSendMessage} className="p-4 bg-white border-t">
-        <div className="flex items-center gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageSelect}
-            accept="image/*"
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-gray-500 hover:text-blue-500 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </button>
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={sending}
-          />
-          <button
-            type="submit"
-            disabled={(!newMessage.trim() && !imagePreview) || sending}
-            className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {sending ? (
-              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            )}
-          </button>
-        </div>
+      {/* INPUT */}
+      <form
+        onSubmit={handleSendMessage}
+        className="border-t px-4 py-3 bg-white flex items-center gap-2"
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          hidden
+          accept="image/*"
+          onChange={handleImageSelect}
+        />
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="text-slate-600 hover:text-indigo-600 transition"
+        >
+          <ImageIcon size={22} />
+        </button>
+
+        <input
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Message…"
+          className="flex-1 px-4 py-2 rounded-full bg-slate-100 outline-none focus:ring-2 focus:ring-indigo-200"
+        />
+
+        <button
+          disabled={sending}
+          className="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition disabled:opacity-50"
+        >
+          <Send size={18} />
+        </button>
       </form>
     </div>
   );

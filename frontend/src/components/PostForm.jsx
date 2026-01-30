@@ -1,182 +1,271 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { X, Image } from 'lucide-react';
 import API from '../services/api';
 
 export default function PostForm({ onPostCreated, communityId = null }) {
+  const { t } = useTranslation();
   const { user } = useContext(AuthContext);
+
   const [content, setContent] = useState('');
-  const [images, setImages] = useState([]);
+  const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedCommunity, setSelectedCommunity] = useState(communityId || '');
+
+  const [selectedCommunity, setSelectedCommunity] = useState(
+    communityId || ''
+  );
   const [userCommunities, setUserCommunities] = useState([]);
 
+  /* ================= FETCH COMMUNITIES ================= */
   useEffect(() => {
-    if (!communityId) {
-      fetchUserCommunities();
-    }
+    if (!communityId) fetchUserCommunities();
   }, [communityId]);
 
   const fetchUserCommunities = async () => {
     try {
       const res = await API.get('/communities');
-      console.log('Communities response:', res.data);
-      
-      // Backend returns { communities: [], total, page, pages }
-      const allCommunities = res.data.communities || res.data || [];
-      
-      // Filter only communities user is member of
-      const memberCommunities = allCommunities.filter(c => 
-        c.members && c.members.some(m => m.toString() === user._id || m === user._id)
+      const all = res.data.communities || res.data || [];
+
+      const joined = all.filter((c) =>
+        c.members?.some(
+          (m) => m.toString() === user._id || m._id === user._id
+        )
       );
-      
-      setUserCommunities(memberCommunities);
-    } catch (error) {
-      console.error('Failed to fetch communities:', error);
+
+      setUserCommunities(joined);
+    } catch {
       setUserCommunities([]);
     }
   };
 
-  const handleImageSelect = (e) => {
-    const files = Array.from(e.target.files);
-    if (images.length + files.length > 4) {
-      toast.error('Maximum 4 images allowed');
+  /* ================= FILE HANDLING ================= */
+  const addFiles = (newFiles) => {
+    if (!newFiles.length) return;
+
+    const remaining = 4 - files.length;
+    if (remaining <= 0) {
+      toast.error('Maximum 4 files allowed');
       return;
     }
 
-    setImages([...images, ...files]);
-    
-    files.forEach(file => {
+    const allowedTypes = ['image/', 'video/'];
+    const validFiles = [];
+    const validPreviews = [];
+
+    newFiles.slice(0, remaining).forEach((file) => {
+      if (!allowedTypes.some((t) => file.type.startsWith(t))) {
+        toast.error('Only images and videos are allowed');
+        return;
+      }
+
+      validFiles.push(file);
+
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviews(prev => [...prev, reader.result]);
+        validPreviews.push(reader.result);
+        if (validPreviews.length === validFiles.length) {
+          setPreviews((prev) => [...prev, ...validPreviews]);
+        }
       };
       reader.readAsDataURL(file);
     });
+
+    setFiles((prev) => [...prev, ...validFiles]);
   };
 
-  const removeImage = (index) => {
-    setImages(images.filter((_, i) => i !== index));
-    setPreviews(previews.filter((_, i) => i !== index));
+  const handleFileSelect = (e) => {
+    addFiles(Array.from(e.target.files));
+    e.target.value = '';
   };
 
+  const handleDrop = (e) => {
+    e.preventDefault();
+    addFiles(Array.from(e.dataTransfer.files));
+  };
+
+  const removeFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  /* ================= SUBMIT ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
-    
+
     const finalCommunityId = communityId || selectedCommunity;
-    
     if (!finalCommunityId) {
-      toast.error('Please select a community');
+      toast.error(t('community.createCommunity'));
       return;
     }
 
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('content', content);
+      formData.append('content', content.trim());
       formData.append('communityId', finalCommunityId);
-      
-      images.forEach(image => {
-        formData.append('images', image);
-      });
-
-      console.log('Submitting post with communityId:', finalCommunityId);
+      files.forEach((file) => formData.append('images', file));
 
       const res = await API.post('/posts', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setContent('');
-      setImages([]);
+      setFiles([]);
       setPreviews([]);
       setSelectedCommunity(communityId || '');
+
       onPostCreated(res.data);
-      toast.success('Post created!');
-    } catch (error) {
-      console.error('Post creation error:', error.response?.data);
-      toast.error(error.response?.data?.message || 'Failed to create post');
+      toast.success(t('post.postCreated'));
+    } catch (err) {
+      toast.error(err.response?.data?.message || t('common.error'));
     } finally {
       setLoading(false);
     }
   };
 
+  /* ================= UI ================= */
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-      <form onSubmit={handleSubmit}>
-        {/* Community Selector - Only show if not on community page */}
-        {!communityId && (
-          <div className="mb-4">
-            <select
-              value={selectedCommunity}
-              onChange={(e) => setSelectedCommunity(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Select a community</option>
-              {userCommunities.map(community => (
-                <option key={community._id} value={community._id}>
-                  {community.name}
-                </option>
-              ))}
-            </select>
-            {userCommunities.length === 0 && (
-              <p className="text-sm text-gray-500 mt-2">
-                Join communities to start posting!
-              </p>
-            )}
+    <div
+      onDrop={handleDrop}
+      onDragOver={(e) => e.preventDefault()}
+      className="
+        bg-white dark:bg-slate-800 rounded-2xl
+        border border-slate-100 dark:border-slate-700
+        shadow-sm
+        p-6
+      "
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* USER */}
+        <div className="flex gap-3 items-center">
+          <img
+            src={
+              user?.profileImage ||
+              `https://ui-avatars.com/api/?name=${user?.fullName || 'User'}`
+            }
+            alt={user?.fullName}
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <div>
+            <p className="font-semibold text-slate-900 dark:text-slate-100">
+              {user.fullName}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              @{user.username}
+            </p>
           </div>
+        </div>
+
+        {/* COMMUNITY */}
+        {!communityId && (
+          <select
+            required
+            value={selectedCommunity}
+            onChange={(e) => setSelectedCommunity(e.target.value)}
+            className="
+              w-full px-4 py-2.5
+              rounded-xl
+              border border-slate-200 dark:border-slate-600
+              bg-slate-50 dark:bg-slate-700
+              text-slate-900 dark:text-slate-100
+              focus:bg-white dark:focus:bg-slate-600
+              focus:border-indigo-300
+              focus:ring-2 focus:ring-indigo-100
+              transition
+            "
+          >
+            <option value="">{t('community.createCommunity')}</option>
+            {userCommunities.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         )}
 
+        {/* TEXT */}
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="What's on your mind? Use #hashtags"
-          className="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-          rows="4"
+          placeholder={t('post.whatOnMind')}
+          rows={4}
           maxLength={2000}
+          className="
+            w-full px-4 py-3
+            rounded-xl
+            border border-slate-200 dark:border-slate-600
+            bg-white dark:bg-slate-700
+            text-slate-900 dark:text-slate-100
+            placeholder:text-slate-400 dark:placeholder:text-slate-500
+            resize-none
+            focus:border-indigo-300
+            focus:ring-2 focus:ring-indigo-100
+            transition
+          "
         />
+        <div className="text-right text-xs text-slate-400">
+          {content.length}/2000
+        </div>
 
-        {/* Image Previews */}
+        {/* MEDIA PREVIEW */}
         {previews.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {previews.map((preview, index) => (
-              <div key={index} className="relative">
-                <img src={preview} alt="" className="w-full h-40 object-cover rounded-lg" />
+          <div className="grid grid-cols-2 gap-3">
+            {previews.map((src, i) => (
+              <div key={i} className="relative group">
+                <img
+                  src={src}
+                  alt="preview"
+                  className="w-full h-40 rounded-xl object-cover"
+                />
                 <button
                   type="button"
-                  onClick={() => removeImage(index)}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  onClick={() => removeFile(i)}
+                  className="
+                    absolute top-2 right-2
+                    bg-black/60 text-white
+                    p-1.5 rounded-full
+                    opacity-0 group-hover:opacity-100
+                    transition
+                  "
                 >
-                  <X size={16} />
+                  <X size={14} />
                 </button>
               </div>
             ))}
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-4">
-          <label className="flex items-center gap-2 text-indigo-600 cursor-pointer hover:text-indigo-700">
-            <Image size={20} />
-            <span className="text-sm font-medium">Add Images</span>
+        {/* ACTIONS */}
+        <div className="flex justify-between items-center pt-4 border-t dark:border-slate-700">
+          <label className="flex items-center gap-2 text-slate-600 dark:text-slate-400 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+            <Image size={18} />
+            Add media
             <input
               type="file"
-              accept="image/*"
+              hidden
               multiple
-              onChange={handleImageSelect}
-              className="hidden"
-              disabled={images.length >= 4}
+              accept="image/*,video/*"
+              onChange={handleFileSelect}
             />
           </label>
 
           <button
-            type="submit"
             disabled={loading || !content.trim()}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="
+              px-6 py-2
+              rounded-xl
+              bg-indigo-600 text-white
+              font-semibold
+              hover:bg-indigo-700
+              disabled:opacity-50
+              transition
+            "
           >
-            {loading ? 'Posting...' : 'Post'}
+            {loading ? t('common.loading') : t('nav.createPost')}
           </button>
         </div>
       </form>

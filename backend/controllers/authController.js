@@ -34,7 +34,6 @@ const validatePassword = (password) => {
 // Register
 exports.register = async (req, res) => {
   try {
-    console.log('Request body:', req.body); // Debug log
     const { username, email, password, fullName } = req.body;
 
     // Check if password exists
@@ -128,6 +127,45 @@ exports.login = async (req, res) => {
   }
 };
 
+// Guest Login - Create unique temporary guest account
+exports.guestLogin = async (req, res) => {
+  try {
+    // Generate random guest ID
+    const randomId = Math.floor(10000 + Math.random() * 90000);
+    const guestEmail = `guest_${randomId}@hobbysphere.com`;
+    const guestPassword = 'Guest@123';
+
+    // Create new guest account
+    const hashedPassword = await bcrypt.hash(guestPassword, 10);
+    const guestUser = await User.create({
+      username: `guest_${randomId}`,
+      email: guestEmail,
+      password: hashedPassword,
+      fullName: `Guest ${randomId}`,
+      bio: '👤 Temporary Guest Account',
+      isGuest: true
+    });
+
+    // Generate token
+    const token = jwt.sign({ id: guestUser._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+    res.json({
+      token,
+      user: {
+        id: guestUser._id,
+        username: guestUser.username,
+        email: guestUser.email,
+        fullName: guestUser.fullName,
+        profileImage: guestUser.profileImage,
+        isGuest: true
+      }
+    });
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({ message: 'Guest login failed' });
+  }
+};
+
 // Get current user
 exports.getMe = async (req, res) => {
   res.json({ 
@@ -213,5 +251,54 @@ exports.resetPassword = async (req, res) => {
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Logout and cleanup guest data
+exports.logout = async (req, res) => {
+  try {
+    // Check if logging out user is guest
+    if (req.user.isGuest || (req.user.email && req.user.email.startsWith('guest_'))) {
+      const Post = require('../models/Post');
+      const Comment = require('../models/Comment');
+      const Community = require('../models/Community');
+      const Message = require('../models/Message');
+      const Bookmark = require('../models/Bookmark');
+
+      const guestId = req.user._id;
+
+      // Delete all guest data including the user account
+      await Promise.all([
+        Post.deleteMany({ user: guestId }),
+        Comment.deleteMany({ user: guestId }),
+        Community.deleteMany({ creator: guestId }),
+        Message.deleteMany({ sender: guestId }),
+        Bookmark.deleteMany({ user: guestId }),
+        
+        // Remove guest from other users' followers/following
+        User.updateMany(
+          { followers: guestId },
+          { $pull: { followers: guestId } }
+        ),
+        User.updateMany(
+          { following: guestId },
+          { $pull: { following: guestId } }
+        ),
+        
+        // Remove guest from communities
+        Community.updateMany(
+          { members: guestId },
+          { $pull: { members: guestId } }
+        ),
+        
+        // Delete the guest user account completely
+        User.findByIdAndDelete(guestId)
+      ]);
+    }
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ message: 'Logout failed' });
   }
 };

@@ -1,68 +1,65 @@
 import { useState, useEffect, useContext } from 'react';
 import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AuthContext } from '../context/AuthContext';
-import { MapPin, Link as LinkIcon, Calendar, Edit, Camera } from 'lucide-react';
+import {
+  MapPin,
+  Link as LinkIcon,
+  Calendar,
+  Edit,
+  Camera,
+  Mail,
+  User as UserIcon,
+} from 'lucide-react';
 import ImageUploadModal from '../components/ImageUploadModal';
 import PostCard from '../components/PostCard';
 import API from '../services/api';
 
 export default function Profile() {
+  const { t } = useTranslation();
   const { username } = useParams();
   const { user: currentUser } = useContext(AuthContext);
   const navigate = useNavigate();
+
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageUploadType, setImageUploadType] = useState(null);
-  // Image upload handlers
-  const handleImageUpdate = (type) => {
-    setImageUploadType(type);
-    setShowImageModal(true);
-  };
-
-  const handleImageUploaded = (newImageUrl) => {
-    if (imageUploadType === 'profile') {
-      setProfile({ ...profile, profileImage: newImageUrl });
-    } else {
-      setProfile({ ...profile, coverImage: newImageUrl });
-    }
-    setShowImageModal(false);
-  };
 
   useEffect(() => {
-    fetchProfile();
-    fetchPosts();
+    loadProfile();
   }, [username]);
 
-  const fetchProfile = async () => {
+  const loadProfile = async () => {
     try {
-      const res = await API.get(`/users/${username}`);
-      setProfile(res.data);
-      setFollowerCount(res.data.followers.length);
-      // FIX: Check using string comparison, not object comparison
+      setLoading(true);
+      const [profileRes, postsRes] = await Promise.all([
+        API.get(`/users/${username}`),
+        API.get(`/users/${username}/posts`),
+      ]);
+
+      const data = profileRes.data;
+      setProfile(data);
+      setPosts(postsRes.data || []);
+      setFollowerCount(data.followers?.length || 0);
+
       setIsFollowing(
-        currentUser?._id 
-          ? res.data.followers.some(f => f._id.toString() === currentUser._id.toString())
+        currentUser?._id
+          ? data.followers?.some(
+              (f) => f._id.toString() === currentUser._id.toString()
+            )
           : false
       );
-    } catch (error) {
-      console.error('Failed to fetch profile:', error);
+    } catch {
+      setProfile(null);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchPosts = async () => {
-    try {
-      const res = await API.get(`/users/${username}/posts`);
-      setPosts(res.data);
-    } catch (error) {
-      console.error('Failed to fetch posts:', error);
     }
   };
 
@@ -70,214 +67,224 @@ export default function Profile() {
     try {
       const res = await API.post(`/users/${profile._id}/follow`);
       setIsFollowing(res.data.isFollowing);
-      // Update follower count
-      setFollowerCount(prev => res.data.isFollowing ? prev + 1 : prev - 1);
-      toast.success(res.data.isFollowing ? 'Following user' : 'Unfollowed user');
-    } catch (error) {
-      toast.error('Failed to follow/unfollow');
+      setFollowerCount((c) => (res.data.isFollowing ? c + 1 : c - 1));
+      toast.success(res.data.isFollowing ? t('profile.follow') : t('profile.unfollow'));
+    } catch {
+      toast.error(t('common.error'));
     }
-  };
-
-  const handlePostDeleted = (postId) => {
-    setPosts(posts.filter(p => p._id !== postId));
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center py-24">
+        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">User not found</h2>
-          <button onClick={() => navigate('/communities')} className="text-indigo-600">Go back to feed</button>
+      <div className="flex flex-col items-center justify-center text-center py-24">
+        <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+          <UserIcon size={40} className="text-slate-300 dark:text-slate-600" />
         </div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">{t('search.noResults')}</h2>
+        <p className="text-slate-500 dark:text-slate-400">{t('search.noResults')}</p>
       </div>
     );
   }
 
   const isOwnProfile = currentUser?.username === profile.username;
-  const userId = profile?._id;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 onClick={() => navigate('/communities')} className="text-2xl font-bold text-indigo-600 cursor-pointer">🎨 HobbySphere</h1>
-        </div>
-      </nav>
-
-      <div className="max-w-4xl mx-auto p-4 mt-6">
-        {/* Profile Header */}
-        <div className="bg-white rounded-xl shadow-md mb-6">
-
-          {/* Cover Image */}
-          <div className="relative">
+    <div className="pb-12 animate-fade-in">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-card overflow-hidden mb-8">
+        <div className="relative h-72 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
+          {profile.coverImage && (
             <img
-              src={profile.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&h=300&fit=crop'}
+              src={profile.coverImage}
               alt="Cover"
-              loading="lazy"
-              className="h-48 w-full object-cover rounded-t-xl"
+              className="w-full h-full object-cover"
             />
-            {/* Cover Image Upload Button */}
-            {isOwnProfile && (
-              <button
-                onClick={() => handleImageUpdate('cover')}
-                className="absolute bottom-4 right-4 bg-white text-gray-700 p-2 rounded-full shadow-lg hover:bg-gray-100"
-              >
-                <Camera size={20} />
-              </button>
-            )}
-          </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-          <div className="px-6 pb-6">
+          {isOwnProfile && (
+            <button
+              onClick={() => {
+                setImageUploadType('cover');
+                setShowImageModal(true);
+              }}
+              className="absolute bottom-6 right-6 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm p-3 rounded-xl shadow-lg 
+                         hover:scale-105 transition-transform"
+            >
+              <Camera size={20} className="text-slate-700 dark:text-slate-300" />
+            </button>
+          )}
+        </div>
 
-            {/* Avatar */}
-            <div className="flex items-end justify-between -mt-16 mb-4">
-              <div className="relative">
-                <img
-                  src={profile.profileImage || `https://ui-avatars.com/api/?name=${profile.username}&background=6366f1&color=fff&size=150`}
-                  alt={profile.username}
-                  loading="lazy"
-                  className="w-32 h-32 object-cover rounded-full border-4 border-white text-white text-5xl font-bold bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center"
-                />
-                {/* Profile Image Upload Button */}
-                {isOwnProfile && (
-                  <button
-                    onClick={() => handleImageUpdate('profile')}
-                    className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full shadow-lg hover:bg-indigo-700"
-                  >
-                    <Camera size={16} />
-                  </button>
-                )}
-              </div>
+        <div className="px-6 sm:px-8 pb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between -mt-20 gap-6">
+            <div className="relative">
+              <img
+                src={
+                  profile.profileImage ||
+                  `https://ui-avatars.com/api/?name=${profile.username}&background=6366f1&color=fff&size=256`
+                }
+                alt="Avatar"
+                className="w-36 h-36 rounded-full border-4 border-white dark:border-slate-800 shadow-xl object-cover"
+              />
+              {isOwnProfile && (
+                <button
+                  onClick={() => {
+                    setImageUploadType('profile');
+                    setShowImageModal(true);
+                  }}
+                  className="absolute bottom-2 right-2 bg-white dark:bg-slate-800 p-2.5 rounded-full shadow-lg 
+                             hover:scale-110 transition-transform"
+                >
+                  <Camera size={18} className="text-slate-700 dark:text-slate-300" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-3">
               {isOwnProfile ? (
                 <button
                   onClick={() => setShowEditModal(true)}
-                  className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 
+                             text-white font-semibold rounded-xl shadow-lg hover:shadow-glow 
+                             hover:scale-105 transition-all"
                 >
-                  <Edit size={18} />
-                  Edit Profile
+                  <Edit size={18} /> {t('profile.editProfile')}
                 </button>
               ) : (
                 <>
                   <button
                     onClick={handleFollow}
-                    className={`px-6 py-2 rounded-lg font-semibold ${
-                      isFollowing
-                        ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                    }`}
+                    className={`
+                      flex items-center gap-2 px-6 py-2.5 font-semibold rounded-xl shadow-md 
+                      transition-all hover:scale-105
+                      ${isFollowing
+                        ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-glow'
+                      }
+                    `}
                   >
-                    {isFollowing ? 'Following' : 'Follow'}
+                    {isFollowing ? t('profile.following') : '+ ' + t('profile.follow')}
                   </button>
-                  {/* Message Button */}
                   <button
-                    onClick={() => navigate(`/messages?userId=${userId}`)}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-full hover:bg-gray-300 ml-2"
+                    onClick={() => navigate(`/messages?userId=${profile._id}`)}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold 
+                               rounded-xl shadow-md hover:bg-slate-200 dark:hover:bg-slate-600 hover:scale-105 transition-all"
                   >
-                    Message
+                    <Mail size={18} /> {t('messages.send')}
                   </button>
                 </>
               )}
             </div>
+          </div>
 
-            {/* User Info */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{profile.fullName}</h2>
-              <p className="text-gray-600">@{profile.username}</p>
+          <div className="mt-6">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{profile.fullName}</h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">@{profile.username}</p>
 
-              {profile.bio && <p className="text-gray-800 mt-4">{profile.bio}</p>}
+            {profile.bio && (
+              <p className="mt-4 max-w-xl text-slate-700 dark:text-slate-300 leading-relaxed">
+                {profile.bio}
+              </p>
+            )}
 
-              <div className="flex flex-wrap gap-4 mt-4 text-gray-600 text-sm">
-                {profile.location && (
-                  <div className="flex items-center gap-1">
-                    <MapPin size={16} />
-                    {profile.location}
-                  </div>
-                )}
-                {profile.website && (
-                  <div className="flex items-center gap-1">
-                    <LinkIcon size={16} />
-                    <a href={profile.website} target="_blank" className="text-indigo-600 hover:underline">
-                      {profile.website}
-                    </a>
-                  </div>
-                )}
-                <div className="flex items-center gap-1">
-                  <Calendar size={16} />
-                  Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                </div>
-              </div>
-
-              {/* Stats - CLICKABLE */}
-              <div className="flex gap-6 mt-4">
-                <div>
-                  <span className="font-bold text-gray-800">{posts.length}</span>
-                  <span className="text-gray-600 ml-1">Posts</span>
-                </div>
-                <div 
-                  onClick={() => navigate(`/profile/${username}/followers`)}
-                  className="cursor-pointer hover:underline"
+            <div className="flex flex-wrap gap-4 mt-5 text-sm text-slate-600 dark:text-slate-400">
+              {profile.location && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin size={16} className="text-slate-400" /> {profile.location}
+                </span>
+              )}
+              {profile.website && (
+                <a
+                  href={profile.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
                 >
-                  <span className="font-bold text-gray-800">{followerCount}</span>
-                  <span className="text-gray-600 ml-1">Followers</span>
-                </div>
-                <div 
-                  onClick={() => navigate(`/profile/${username}/following`)}
-                  className="cursor-pointer hover:underline"
-                >
-                  <span className="font-bold text-gray-800">{profile.following.length}</span>
-                  <span className="text-gray-600 ml-1">Following</span>
-                </div>
-              </div>
+                  <LinkIcon size={16} /> Website
+                </a>
+              )}
+              <span className="flex items-center gap-1.5">
+                <Calendar size={16} className="text-slate-400" /> {t('profile.joinedOn')}{' '}
+                {new Date(profile.createdAt).toLocaleDateString('en-US', {
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* Posts */}
-        <div>
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Posts</h3>
-          {posts.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-md p-12 text-center">
-              <p className="text-gray-600">No posts yet</p>
-            </div>
-          ) : (
-            posts.map(post => (
-              <PostCard
-                key={post._id}
-                post={post}
-                currentUser={currentUser}
-                onDelete={handlePostDeleted}
-              />
-            ))
-          )}
+          <div className="flex gap-8 mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
+            <Stat label={t('profile.posts')} value={posts.length} />
+            <Stat
+              label={t('profile.followers')}
+              value={followerCount}
+              clickable
+              onClick={() => navigate(`/profile/${username}/followers`)}
+            />
+            <Stat
+              label={t('profile.following')}
+              value={profile.following?.length || 0}
+              clickable
+              onClick={() => navigate(`/profile/${username}/following`)}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Image Upload Modal */}
+      <div className="space-y-6">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 px-1">{t('profile.posts')}</h2>
+
+        {posts.length === 0 ? (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-20 text-center shadow-card border border-slate-100 dark:border-slate-700">
+            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <UserIcon size={32} className="text-slate-300 dark:text-slate-600" />
+            </div>
+            <p className="text-slate-500 dark:text-slate-400">
+              {isOwnProfile ? t('community.noPosts') : t('community.noPosts')}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {posts.map((post) => (
+              <PostCard key={post._id} post={post} currentUser={currentUser} />
+            ))}
+          </div>
+        )}
+      </div>
+
       {showImageModal && (
         <ImageUploadModal
           type={imageUploadType}
-          currentImage={imageUploadType === 'profile' ? profile.profileImage : profile.coverImage}
+          currentImage={
+            imageUploadType === 'profile' ? profile.profileImage : profile.coverImage
+          }
           onClose={() => setShowImageModal(false)}
-          onUpdate={handleImageUploaded}
+          onUpdate={(url) => {
+            setProfile((p) => ({
+              ...p,
+              ...(imageUploadType === 'profile'
+                ? { profileImage: url }
+                : { coverImage: url }),
+            }));
+            setShowImageModal(false);
+          }}
         />
       )}
 
-      {/* Edit Profile Modal */}
       {showEditModal && (
         <EditProfileModal
           profile={profile}
           onClose={() => setShowEditModal(false)}
-          onUpdate={(updated) => {
-            setProfile(updated);
+          onUpdate={(p) => {
+            setProfile(p);
             setShowEditModal(false);
           }}
         />
@@ -286,94 +293,122 @@ export default function Profile() {
   );
 }
 
+function Stat({ label, value, onClick, clickable }) {
+  const Tag = clickable ? 'button' : 'div';
+  return (
+    <Tag
+      onClick={onClick}
+      className={`
+        text-left group transition-all
+        ${clickable ? 'hover:scale-105 cursor-pointer' : ''}
+      `}
+    >
+      <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+        {value}
+      </p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{label}</p>
+    </Tag>
+  );
+}
+
 function EditProfileModal({ profile, onClose, onUpdate }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
-    fullName: profile.fullName,
+    fullName: profile.fullName || '',
     bio: profile.bio || '',
+    location: profile.location || '',
     website: profile.website || '',
-    location: profile.location || ''
   });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     try {
+      setLoading(true);
       const res = await API.put('/users/profile', formData);
-      toast.success('Profile updated!');
+      toast.success(t('common.success'));
       onUpdate(res.data);
-    } catch (error) {
-      toast.error('Failed to update profile');
+    } catch {
+      toast.error(t('common.error'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6">
-        <h2 className="text-2xl font-bold mb-6">Edit Profile</h2>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-700">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('profile.editProfile')}</h2>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              {t('auth.fullName')}
+            </label>
             <input
               type="text"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              required
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder={t('auth.fullName')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              {t('profile.bio')}
+            </label>
             <textarea
               value={formData.bio}
               onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none"
-              rows="3"
-              maxLength={160}
-            />
-            <p className="text-xs text-gray-500 mt-1">{formData.bio.length}/160</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-            <input
-              type="url"
-              value={formData.website}
-              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              placeholder="https://example.com"
+              rows={4}
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              placeholder={t('profile.bio')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Location
+            </label>
             <input
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="City, Country"
             />
           </div>
 
-          <div className="flex gap-3 mt-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Website
+            </label>
+            <input
+              type="url"
+              value={formData.website}
+              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="https://example.com"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300"
+              className="flex-1 px-6 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="flex-1 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save'}
+              {loading ? t('common.loading') : t('common.save')}
             </button>
           </div>
         </form>
