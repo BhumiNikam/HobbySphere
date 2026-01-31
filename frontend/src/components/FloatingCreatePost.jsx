@@ -50,42 +50,41 @@ export default function FloatingCreatePost() {
           className="
             fixed inset-0 z-50
             flex items-center justify-center
-            bg-black/40 backdrop-blur-sm
+            bg-black/50 dark:bg-black/70 backdrop-blur-sm
             animate-fade-in
+            p-4
           "
           onClick={() => setOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             className="
-              relative w-full max-w-2xl mx-4
+              bg-white dark:bg-slate-900 rounded-2xl
+              w-full max-w-2xl
+              shadow-2xl border border-slate-200 dark:border-slate-800
+              max-h-[90vh] overflow-y-auto
               animate-scale-in
             "
           >
-            {/* CLOSE */}
-            <button
-              onClick={() => setOpen(false)}
-              className="
-                absolute top-3 right-3 z-10
-                p-2 rounded-full
-                bg-white shadow
-                hover:bg-slate-100
-                transition
-              "
-            >
-              <X size={18} />
-            </button>
+            {/* HEADER */}
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+              <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Create Post</h2>
+              <button
+                onClick={() => setOpen(false)}
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
             {/* POST FORM */}
-            <PostForm
-              onPostCreated={(newPost) => {
-                setOpen(false);
-
-                window.dispatchEvent(
-                  new CustomEvent('post-created', { detail: newPost })
-                );
-              }}
-            />
+            <div className="p-4 sm:p-6">
+              <PostForm
+                onPostCreated={() => {
+                  setOpen(false);
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

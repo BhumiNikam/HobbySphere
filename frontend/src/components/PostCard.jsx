@@ -206,13 +206,18 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
         )}
       </div>
 
-      {/* MEDIA */}
+      {/* ✅ MEDIA - Maintains original aspect ratio */}
       {post.images?.length > 0 && (
-        <div onDoubleClick={handleMediaDoubleClick} className="relative bg-slate-950 overflow-hidden">
+        <div 
+          onDoubleClick={handleMediaDoubleClick} 
+          className="relative bg-slate-950 flex items-center justify-center"
+          style={{ maxHeight: '600px' }}
+        >
           {post.images[0].type === 'video' ? (
             <video
               controls
-              className="w-full max-h-[400px] sm:max-h-[520px] lg:max-h-[600px] object-contain"
+              className="w-full h-full object-contain"
+              style={{ maxHeight: '600px' }}
               src={post.images[0].url}
             >
               Your browser doesn't support video.
@@ -221,7 +226,8 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
             <img
               src={post.images[0].url}
               alt="post"
-              className="w-full max-h-[400px] sm:max-h-[520px] object-contain"
+              className="w-full h-auto object-contain"
+              style={{ maxHeight: '600px' }}
               draggable={false}
             />
           )}

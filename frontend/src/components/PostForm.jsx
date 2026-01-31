@@ -1,341 +1,298 @@
-import { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { X, Image as ImageIcon, Video, Globe, Users } from 'lucide-react';
+import { Globe, Users, Image as ImageIcon, X, Video } from 'lucide-react';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-export default function PostForm({ onPostCreated, communityId = null }) {
+export default function PostForm({ onPostCreated, communityId: propCommunityId }) {
   const { t } = useTranslation();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
+  const fileInputRef = useRef(null);
 
   const [content, setContent] = useState('');
-  const [files, setFiles] = useState([]);
-  const [previews, setPreviews] = useState([]);
+  const [mediaFiles, setMediaFiles] = useState([]);
+  const [mediaPreview, setMediaPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [postTo, setPostTo] = useState(propCommunityId ? 'community' : 'profile');
+  const [selectedCommunity, setSelectedCommunity] = useState(propCommunityId || '');
+  const [communities, setCommunities] = useState([]);
 
-  const [postType, setPostType] = useState(communityId ? 'community' : 'profile');
-  const [selectedCommunity, setSelectedCommunity] = useState(communityId || '');
-  const [userCommunities, setUserCommunities] = useState([]);
+  // ✅ Fetch user's communities
+  useState(() => {
+    (async () => {
+      try {
+        const res = await API.get('/users/me');
+        const userCommunities = res.data.user.communities || [];
+        
+        // Fetch full community details
+        if (userCommunities.length > 0) {
+          const communityDetails = await Promise.all(
+            userCommunities.map(id => API.get(`/communities/${id}`).catch(() => null))
+          );
+          setCommunities(communityDetails.filter(Boolean).map(r => r.data));
+        }
+      } catch (err) {
+        console.error('Failed to fetch communities:', err);
+      }
+    })();
+  }, []);
 
-  /* ================= FETCH COMMUNITIES ================= */
-  useEffect(() => {
-    if (!communityId) fetchUserCommunities();
-  }, [communityId]);
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
 
-  const fetchUserCommunities = async () => {
-    try {
-      const res = await API.get('/communities');
-      const all = res.data.communities || res.data || [];
+    const file = files[0]; // Only take first file
+    const isVideo = file.type.startsWith('video/');
 
-      const joined = all.filter((c) =>
-        c.members?.some(
-          (m) => m.toString() === user._id || m._id === user._id
-        )
-      );
-
-      setUserCommunities(joined);
-    } catch {
-      setUserCommunities([]);
-    }
-  };
-
-  /* ================= FILE HANDLING ================= */
-  const addFiles = (newFiles) => {
-    if (!newFiles.length) return;
-
-    const remaining = 4 - files.length;
-    if (remaining <= 0) {
-      toast.error('Maximum 4 files allowed');
+    if (isVideo && file.size > 50 * 1024 * 1024) {
+      toast.error('Video must be less than 50MB');
       return;
     }
 
-    const allowedTypes = ['image/', 'video/'];
-    const validFiles = [];
-    const validPreviews = [];
+    if (!isVideo && file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be less than 10MB');
+      return;
+    }
 
-    newFiles.slice(0, remaining).forEach((file) => {
-      if (!allowedTypes.some((t) => file.type.startsWith(t))) {
-        toast.error('Only images and videos are allowed');
-        return;
+    setMediaFiles([file]);
+
+    // ✅ Create preview with original aspect ratio
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (isVideo) {
+        // For video, create a video element to get dimensions
+        const video = document.createElement('video');
+        video.src = event.target.result;
+        video.onloadedmetadata = () => {
+          setMediaPreview({
+            url: event.target.result,
+            type: 'video',
+            width: video.videoWidth,
+            height: video.videoHeight,
+            aspectRatio: video.videoWidth / video.videoHeight
+          });
+        };
+      } else {
+        // For image, create an image element to get dimensions
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          setMediaPreview({
+            url: event.target.result,
+            type: 'image',
+            width: img.width,
+            height: img.height,
+            aspectRatio: img.width / img.height
+          });
+        };
       }
-
-      validFiles.push(file);
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        validPreviews.push({
-          url: reader.result,
-          type: file.type.startsWith('video/') ? 'video' : 'image'
-        });
-        if (validPreviews.length === validFiles.length) {
-          setPreviews((prev) => [...prev, ...validPreviews]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
-    setFiles((prev) => [...prev, ...validFiles]);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleFileSelect = (e) => {
-    addFiles(Array.from(e.target.files));
-    e.target.value = '';
+  const removeMedia = () => {
+    setMediaFiles([]);
+    setMediaPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    addFiles(Array.from(e.dataTransfer.files));
-  };
-
-  const removeFile = (index) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  /* ================= SUBMIT ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!content.trim()) {
-      toast.error('Please write something');
+
+    if (!content.trim() && mediaFiles.length === 0) {
+      toast.error('Post content or media is required');
       return;
     }
 
-    // If posting to community, require community selection
-    if (postType === 'community') {
-      const finalCommunityId = communityId || selectedCommunity;
-      if (!finalCommunityId) {
-        toast.error('Please select a community');
-        return;
-      }
+    // ✅ Validate community selection only if posting to community
+    if (postTo === 'community' && !selectedCommunity) {
+      toast.error('Please select a community');
+      return;
     }
 
     setLoading(true);
+
     try {
       const formData = new FormData();
-      formData.append('content', content.trim());
-      
-      // Only add communityId if posting to community
-      if (postType === 'community') {
-        formData.append('communityId', communityId || selectedCommunity);
-      }
-      
-      files.forEach((file) => formData.append('images', file));
+      formData.append('content', content);
 
-      const res = await API.post('/posts', formData, {
+      // ✅ Only add communityId if posting to community
+      if (postTo === 'community' && selectedCommunity) {
+        formData.append('communityId', selectedCommunity);
+      }
+
+      mediaFiles.forEach((file) => {
+        formData.append('images', file);
+      });
+
+      await API.post('/posts', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
+      toast.success('Post created successfully! 🎉');
+      
+      // Reset form
       setContent('');
-      setFiles([]);
-      setPreviews([]);
-      setSelectedCommunity(communityId || '');
-      setPostType(communityId ? 'community' : 'profile');
+      setMediaFiles([]);
+      setMediaPreview(null);
+      setSelectedCommunity('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
 
-      onPostCreated(res.data);
-      toast.success('Post created successfully!');
+      onPostCreated?.();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create post');
+      const message = err.response?.data?.message || 'Failed to create post';
+      toast.error(message);
+      console.error('Post creation error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= UI ================= */
   return (
-    <div
-      onDrop={handleDrop}
-      onDragOver={(e) => e.preventDefault()}
-      className="
-        bg-white dark:bg-slate-900 rounded-2xl
-        border border-slate-200 dark:border-slate-700
-        shadow-sm
-        p-6
-      "
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* USER INFO */}
-        <div className="flex gap-3 items-center">
-          <img
-            src={
-              user?.profileImage ||
-              `https://ui-avatars.com/api/?name=${user?.fullName || 'User'}`
-            }
-            alt={user?.fullName}
-            className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 shadow-sm"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-              {user.fullName}
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
-              @{user.username}
-            </p>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* ✅ POST TO SELECTOR - Only show if not forced to community */}
+      {!propCommunityId && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setPostTo('profile')}
+            className={`
+              flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all
+              ${postTo === 'profile'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }
+            `}
+          >
+            <Globe size={18} />
+            Post to Profile
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPostTo('community')}
+            className={`
+              flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all
+              ${postTo === 'community'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }
+            `}
+          >
+            <Users size={18} />
+            Post to Community
+          </button>
         </div>
+      )}
 
-        {/* POST TYPE TOGGLE (only show if not locked to community) */}
-        {!communityId && (
-          <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setPostType('profile')}
-              className={`
-                flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all
-                ${postType === 'profile'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }
-              `}
-            >
-              <Globe size={18} />
-              Post to Profile
-            </button>
-            <button
-              type="button"
-              onClick={() => setPostType('community')}
-              className={`
-                flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all
-                ${postType === 'community'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }
-              `}
-            >
-              <Users size={18} />
-              Post to Community
-            </button>
-          </div>
-        )}
-
-        {/* COMMUNITY SELECTOR (only show if posting to community) */}
-        {!communityId && postType === 'community' && (
+      {/* ✅ COMMUNITY SELECTOR - Only show if posting to community */}
+      {postTo === 'community' && (
+        <div>
           <select
-            required
             value={selectedCommunity}
             onChange={(e) => setSelectedCommunity(e.target.value)}
-            className="
-              w-full px-4 py-3
-              rounded-xl
-              border border-slate-200 dark:border-slate-700
-              bg-white dark:bg-slate-800
-              text-slate-900 dark:text-slate-100
-              focus:border-indigo-500 dark:focus:border-indigo-400
-              focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30
-              transition-all
-            "
+            className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required={postTo === 'community'}
           >
             <option value="">Select a community</option>
-            {userCommunities.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.name}
+            {communities.map((community) => (
+              <option key={community._id} value={community._id}>
+                {community.name}
               </option>
             ))}
           </select>
-        )}
-
-        {/* TEXT AREA */}
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="What's on your mind?"
-          rows={4}
-          maxLength={2000}
-          className="
-            w-full px-4 py-3
-            rounded-xl
-            border border-slate-200 dark:border-slate-700
-            bg-white dark:bg-slate-800
-            text-slate-900 dark:text-slate-100
-            placeholder:text-slate-400 dark:placeholder:text-slate-500
-            resize-none
-            focus:border-indigo-500 dark:focus:border-indigo-400
-            focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30
-            transition-all
-          "
-        />
-        <div className="text-right text-xs text-slate-400 dark:text-slate-500">
-          {content.length}/2000
+          {communities.length === 0 && (
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+              You haven't joined any communities yet
+            </p>
+          )}
         </div>
+      )}
 
-        {/* MEDIA PREVIEW */}
-        {previews.length > 0 && (
-          <div className={`grid gap-3 ${previews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-            {previews.map((preview, i) => (
-              <div 
-                key={i} 
-                className={`relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 ${
-                  previews.length === 1 ? 'max-h-96' : ''
-                }`}
-              >
-                {preview.type === 'video' ? (
-                  <video
-                    src={preview.url}
-                    controls
-                    className={`w-full object-contain bg-black ${
-                      previews.length === 1 ? 'max-h-96' : 'h-48'
-                    }`}
-                  />
-                ) : (
-                  <img
-                    src={preview.url}
-                    alt="preview"
-                    className={`w-full object-cover ${
-                      previews.length === 1 ? 'max-h-96' : 'h-48'
-                    }`}
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() => removeFile(i)}
-                  className="
-                    absolute top-2 right-2
-                    bg-black/70 hover:bg-black/90 text-white
-                    p-2 rounded-full
-                    opacity-0 group-hover:opacity-100
-                    transition-all hover:scale-110
-                  "
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* CONTENT */}
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="What's on your mind?"
+        className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+        rows={4}
+        maxLength={2000}
+      />
+      <div className="text-right text-xs text-slate-500 dark:text-slate-400">
+        {content.length}/2000
+      </div>
 
-        {/* ACTIONS */}
-        <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
-          <label className="flex items-center gap-2 text-slate-600 dark:text-slate-400 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium px-4 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
-            <ImageIcon size={20} />
-            <span>Add Media</span>
-            <input
-              type="file"
-              hidden
-              multiple
-              accept="image/*,video/*"
-              onChange={handleFileSelect}
-            />
-          </label>
-
+      {/* ✅ MEDIA PREVIEW - Maintains aspect ratio */}
+      {mediaPreview && (
+        <div className="relative bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden">
           <button
-            type="submit"
-            disabled={loading || !content.trim()}
-            className="
-              px-6 py-2.5
-              rounded-xl
-              bg-indigo-600 dark:bg-indigo-500 text-white
-              font-semibold
-              hover:bg-indigo-700 dark:hover:bg-indigo-600
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transition-all
-              shadow-md hover:shadow-lg
-              hover:scale-105 active:scale-95
-            "
+            type="button"
+            onClick={removeMedia}
+            className="absolute top-2 right-2 z-10 p-2 bg-black/60 hover:bg-black/80 rounded-full text-white transition-all"
           >
-            {loading ? 'Posting...' : 'Post'}
+            <X size={18} />
           </button>
+
+          <div 
+            className="flex items-center justify-center bg-slate-950"
+            style={{
+              aspectRatio: mediaPreview.aspectRatio,
+              maxHeight: '500px'
+            }}
+          >
+            {mediaPreview.type === 'video' ? (
+              <video
+                src={mediaPreview.url}
+                controls
+                className="w-full h-full object-contain"
+                style={{ maxHeight: '500px' }}
+              />
+            ) : (
+              <img
+                src={mediaPreview.url}
+                alt="Preview"
+                className="w-full h-full object-contain"
+                style={{ maxHeight: '500px' }}
+              />
+            )}
+          </div>
+
+          {/* Dimensions info */}
+          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 rounded text-white text-xs">
+            {mediaPreview.width} × {mediaPreview.height}
+          </div>
         </div>
-      </form>
-    </div>
+      )}
+
+      {/* ACTIONS */}
+      <div className="flex items-center justify-between pt-2">
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            onChange={handleFileChange}
+            className="hidden"
+            id="media-upload"
+          />
+          <label
+            htmlFor="media-upload"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-all"
+          >
+            <ImageIcon size={18} />
+            <span className="text-sm font-medium">Add Media</span>
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || (!content.trim() && mediaFiles.length === 0)}
+          className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl font-semibold transition-all disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40"
+        >
+          {loading ? 'Posting...' : 'Post'}
+        </button>
+      </div>
+    </form>
   );
 }
