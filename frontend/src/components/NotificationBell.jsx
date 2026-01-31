@@ -166,7 +166,7 @@ export default function NotificationBell() {
 
   /* ================= UI ================= */
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-50" ref={dropdownRef}>
       {/* BELL */}
       <button
         onClick={() => setIsOpen((p) => !p)}
@@ -190,7 +190,6 @@ export default function NotificationBell() {
               text-white font-bold
               flex items-center justify-center
               shadow-md
-              animate-bounce-slow
             "
           >
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -198,12 +197,12 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* ✅ MOBILE: Full-screen overlay */}
+      {/* NOTIFICATION PANEL */}
       {isOpen && (
         <>
           {/* Mobile backdrop */}
           <div 
-            className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-40 sm:hidden"
+            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm z-[100] sm:hidden"
             onClick={() => setIsOpen(false)}
           />
 
@@ -211,20 +210,28 @@ export default function NotificationBell() {
           <div
             className="
               fixed sm:absolute
-              inset-x-0 bottom-0 sm:inset-auto sm:right-0 sm:top-full sm:mt-2
+              left-0 right-0 bottom-0 sm:left-auto sm:right-0 sm:bottom-auto sm:top-full sm:mt-2
               w-full sm:w-96
-              max-h-[85vh] sm:max-h-[520px]
               bg-white dark:bg-slate-900
               rounded-t-3xl sm:rounded-2xl
-              shadow-xl border-t sm:border border-slate-200 dark:border-slate-800
+              shadow-2xl 
+              border-t-2 sm:border-t sm:border 
+              border-slate-200 dark:border-slate-700
               overflow-hidden
-              z-50
-              animate-slide-up sm:animate-scale-in
+              z-[101]
             "
+            style={{
+              maxHeight: window.innerWidth < 640 ? 'calc(100vh - 60px)' : '85vh',
+            }}
           >
+            {/* Drag handle for mobile */}
+            <div className="sm:hidden flex justify-center pt-2 pb-1">
+              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
+            </div>
+
             {/* HEADER */}
-            <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
-              <h3 className="font-bold text-lg sm:text-xl text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">
                 Notifications
               </h3>
 
@@ -238,22 +245,26 @@ export default function NotificationBell() {
                   </button>
                 )}
 
-                {/* Close button (mobile only) */}
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="sm:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="sm:hidden p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
-                  <X size={20} className="text-slate-600 dark:text-slate-400" />
+                  <X size={18} className="text-slate-600 dark:text-slate-400" />
                 </button>
               </div>
             </div>
 
             {/* LIST */}
-            <div className="overflow-y-auto max-h-[calc(85vh-73px)] sm:max-h-[460px]">
+            <div 
+              className="overflow-y-auto"
+              style={{
+                maxHeight: window.innerWidth < 640 ? 'calc(100vh - 140px)' : '460px',
+              }}
+            >
               {notifications.length === 0 ? (
-                <div className="py-16 sm:py-20 text-center text-slate-500 dark:text-slate-400">
-                  <div className="text-4xl sm:text-5xl mb-3">🔔</div>
-                  <p className="text-sm sm:text-base">No notifications yet</p>
+                <div className="py-20 text-center text-slate-500 dark:text-slate-400">
+                  <div className="text-5xl mb-3">🔔</div>
+                  <p className="text-sm">No notifications yet</p>
                 </div>
               ) : (
                 notifications.map((n) => (
@@ -261,7 +272,7 @@ export default function NotificationBell() {
                     key={n._id}
                     onClick={() => handleNotificationClick(n)}
                     className={`
-                      px-4 sm:px-5 py-3 sm:py-4 cursor-pointer
+                      px-5 py-3.5 cursor-pointer
                       border-b border-slate-100 dark:border-slate-800 last:border-b-0
                       hover:bg-slate-50 dark:hover:bg-slate-800/50
                       active:bg-slate-100 dark:active:bg-slate-800
@@ -277,14 +288,14 @@ export default function NotificationBell() {
                           `https://ui-avatars.com/api/?name=${n.from?.username}&background=6366f1&color=fff`
                         }
                         alt={n.from?.username}
-                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover flex-shrink-0 ring-2 ring-white dark:ring-slate-900"
+                        className="w-11 h-11 rounded-full object-cover flex-shrink-0 ring-2 ring-white dark:ring-slate-900"
                       />
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex gap-2 items-start mb-1">
                           {getIcon(n.type)}
-                          <p className="text-sm sm:text-base flex-1 leading-snug text-slate-700 dark:text-slate-300">
+                          <p className="text-sm flex-1 leading-snug text-slate-700 dark:text-slate-300">
                             {getText(n)}
                           </p>
 
@@ -318,8 +329,8 @@ export default function NotificationBell() {
               )}
             </div>
 
-            {/* Mobile footer spacer for gesture area */}
-            <div className="h-6 sm:hidden bg-white dark:bg-slate-900" />
+            {/* Safe area spacer for mobile */}
+            <div className="h-safe sm:hidden bg-white dark:bg-slate-900" style={{ height: '20px' }} />
           </div>
         </>
       )}
