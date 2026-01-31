@@ -1,12 +1,239 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HobbySphere</title>
+    <style>
+      /* Critical CSS - loads before React */
+      .initial-skeleton {
+        display: block;
+      }
+      .initial-skeleton.hidden {
+        display: none;
+      }
+      
+      /* Skeleton styles */
+      .skeleton-container {
+        min-height: 100vh;
+        background: #f8f9fb;
+        padding-top: 80px;
+      }
+      
+      .skeleton-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+        display: flex;
+        gap: 32px;
+      }
+      
+      .skeleton-main {
+        flex: 1;
+        max-width: calc(100% - 360px);
+      }
+      
+      .skeleton-sidebar {
+        width: 336px;
+        flex-shrink: 0;
+      }
+      
+      .skeleton-post {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 24px;
+        overflow: hidden;
+      }
+      
+      .skeleton-header {
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      
+      .skeleton-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #e2e8f0;
+      }
+      
+      .skeleton-text {
+        flex: 1;
+      }
+      
+      .skeleton-line {
+        height: 14px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+      
+      .skeleton-line.short {
+        width: 120px;
+      }
+      
+      .skeleton-image {
+        width: 100%;
+        aspect-ratio: 4/3;
+        background: #e2e8f0;
+      }
+      
+      .skeleton-actions {
+        padding: 12px 16px;
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid #f1f5f9;
+      }
+      
+      .skeleton-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: #e2e8f0;
+      }
+      
+      .skeleton-content {
+        padding: 12px 16px;
+      }
+      
+      .skeleton-widget {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      
+      .skeleton-widget-item {
+        height: 56px;
+        background: #f1f5f9;
+        border-radius: 12px;
+        margin-bottom: 12px;
+      }
+      
+      /* Pulse animation */
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      
+      .skeleton-avatar,
+      .skeleton-line,
+      .skeleton-image,
+      .skeleton-icon,
+      .skeleton-widget-item {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      
+      @media (max-width: 1024px) {
+        .skeleton-sidebar {
+          display: none;
+        }
+        .skeleton-main {
+          max-width: 100%;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- This skeleton shows BEFORE React loads -->
+      <div class="initial-skeleton skeleton-container">
+        <div class="skeleton-wrapper">
+          <!-- Main content -->
+          <div class="skeleton-main">
+            <!-- Post 1 -->
+            <div class="skeleton-post">
+              <div class="skeleton-header">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-text">
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line short" style="width: 80px; height: 12px;"></div>
+                </div>
+              </div>
+              <div class="skeleton-image"></div>
+              <div class="skeleton-actions">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-icon" style="margin-left: auto;"></div>
+              </div>
+              <div class="skeleton-content">
+                <div class="skeleton-line short" style="width: 64px;"></div>
+                <div class="skeleton-line" style="margin-top: 8px;"></div>
+                <div class="skeleton-line" style="width: 85%;"></div>
+              </div>
+            </div>
+            
+            <!-- Post 2 -->
+            <div class="skeleton-post">
+              <div class="skeleton-header">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-text">
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line short" style="width: 80px; height: 12px;"></div>
+                </div>
+              </div>
+              <div class="skeleton-image"></div>
+              <div class="skeleton-actions">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-icon" style="margin-left: auto;"></div>
+              </div>
+              <div class="skeleton-content">
+                <div class="skeleton-line short" style="width: 64px;"></div>
+                <div class="skeleton-line" style="margin-top: 8px;"></div>
+                <div class="skeleton-line" style="width: 85%;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Sidebar -->
+          <div class="skeleton-sidebar">
+            <!-- Widget 1 -->
+            <div class="skeleton-widget">
+              <div class="skeleton-line short" style="margin-bottom: 16px;"></div>
+              <div class="skeleton-widget-item"></div>
+              <div class="skeleton-widget-item"></div>
+              <div class="skeleton-widget-item"></div>
+              <div class="skeleton-widget-item" style="margin-bottom: 0;"></div>
+            </div>
+            
+            <!-- Widget 2 -->
+            <div class="skeleton-widget">
+              <div class="skeleton-line short" style="margin-bottom: 16px;"></div>
+              <div class="skeleton-widget-item"></div>
+              <div class="skeleton-widget-item"></div>
+              <div class="skeleton-widget-item" style="margin-bottom: 0;"></div>
+            </div>
+            
+            <!-- Widget 3 -->
+            <div class="skeleton-widget">
+              <div class="skeleton-line short" style="margin-bottom: 16px;"></div>
+              <div class="skeleton-widget-item"></div>
+              <div class="skeleton-widget-item"></div>
+              <div class="skeleton-widget-item" style="margin-bottom: 0;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Hide skeleton when React mounts
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const skeleton = document.querySelector('.initial-skeleton');
+          if (skeleton) {
+            skeleton.classList.add('hidden');
+          }
+        }, 100);
+      });
+    </script>
   </body>
 </html>

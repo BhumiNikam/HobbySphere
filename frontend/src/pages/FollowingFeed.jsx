@@ -4,18 +4,28 @@ import { useSocket } from '../context/SocketContext';
 import PostCard from '../components/PostCard';
 import API from '../services/api';
 import PostSkeleton from '../components/ui/PostSkeleton';
+import RightSidebar from '../components/sidebar/RightSidebar';
 
 const SEEN_POSTS_KEY = 'hobbysphere_seen_posts';
 const LIMIT = 5;
+
+function FeedSkeleton() {
+  return (
+    <div className="w-full min-h-[600px] space-y-6">
+      <PostSkeleton />
+      <PostSkeleton />
+      <PostSkeleton />
+    </div>
+  );
+}
 
 export default function FollowingFeed() {
   const { user } = useContext(AuthContext);
   const { socket } = useSocket();
 
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
 
@@ -39,12 +49,16 @@ export default function FollowingFeed() {
   }, [seenPosts]);
 
   useEffect(() => {
-    loadFeed(1, true);
+    loadFeed(1);
   }, []);
 
-  const loadFeed = async (pageNum, initial = false) => {
+  const loadFeed = async (pageNum) => {
     try {
-      initial ? setLoading(true) : setLoadingMore(true);
+      if (pageNum === 1) {
+        // Don't set loading state, keep posts as null for initial load
+      } else {
+        setLoadingMore(true);
+      }
 
       const res = await API.get(
         `/posts/feed/following?page=${pageNum}&limit=${LIMIT}`
@@ -57,15 +71,15 @@ export default function FollowingFeed() {
       const more = Boolean(res.data?.hasMore);
 
       setPosts((prev) =>
-        pageNum === 1 ? newPosts : [...prev, ...newPosts]
+        pageNum === 1 ? newPosts : [...(prev || []), ...newPosts]
       );
 
       setHasMore(more);
       setPage(pageNum);
     } catch (err) {
       console.error('Failed to load feed', err);
+      setPosts([]);
     } finally {
-      setLoading(false);
       setLoadingMore(false);
     }
   };
@@ -87,7 +101,7 @@ export default function FollowingFeed() {
 
   useEffect(() => {
     const onPostCreated = (e) => {
-      setPosts((prev) => [e.detail, ...prev]);
+      setPosts((prev) => [e.detail, ...(prev || [])]);
       setHasNewPosts(false);
     };
 
@@ -99,13 +113,13 @@ export default function FollowingFeed() {
   const handleRefresh = async () => {
     setSeenPosts(new Set());
     localStorage.removeItem(SEEN_POSTS_KEY);
-    await loadFeed(1, true);
+    await loadFeed(1);
     setHasNewPosts(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePostDeleted = (postId) => {
-    setPosts((prev) => prev.filter((p) => p._id !== postId));
+    setPosts((prev) => (prev || []).filter((p) => p._id !== postId));
     setSeenPosts((prev) => {
       const updated = new Set(prev);
       updated.delete(postId);
@@ -139,7 +153,7 @@ export default function FollowingFeed() {
   };
 
   useEffect(() => {
-    if (!hasMore || loadingMore) return;
+    if (!hasMore || loadingMore || !posts) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -155,77 +169,101 @@ export default function FollowingFeed() {
     }
 
     return () => observer.disconnect();
-  }, [page, hasMore, loadingMore]);
+  }, [page, hasMore, loadingMore, posts]);
 
-  const firstUnseenIndex = posts.findIndex(
+  const firstUnseenIndex = posts?.findIndex(
     (p) => !seenPosts.has(p._id)
-  );
+  ) ?? -1;
 
   return (
-    <div className="space-y-12 py-6">
-      {hasNewPosts && (
-        <div className="sticky top-20 z-30 flex justify-center py-4">
-          <button
-            onClick={handleRefresh}
-            className="bg-indigo-600 text-white px-6 py-2 text-sm rounded-full shadow-lg hover:bg-indigo-700 transition"
-          >
-            New posts available · Tap to refresh
-          </button>
-        </div>
-      )}
-
-      {loading ? (
-        <>
-          <PostSkeleton />
-          <PostSkeleton />
-          <PostSkeleton />
-        </>
-      ) : posts.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center border">
-          <p className="text-slate-500 text-sm">
-            No posts yet.<br />Follow people to see updates ✨
-          </p>
-        </div>
-      ) : (
-        <>
-          {posts.map((post, index) => (
-            <div
-              key={post._id}
-              ref={observePost}
-              data-postid={post._id}
-              className={
-                !seenPosts.has(post._id)
-                  ? 'animate-fade-in-up'
-                  : ''
-              }
+    // EXACT same grid as CommunitiesLayout
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
+      {/* Main content column */}
+      <div className="w-full space-y-12 py-6 min-w-0">
+        {hasNewPosts && (
+          <div className="sticky top-20 z-30 flex justify-center py-4">
+            <button
+              onClick={handleRefresh}
+              className="bg-indigo-600 text-white px-6 py-2 text-sm rounded-full shadow-lg hover:bg-indigo-700 transition"
             >
-              {index === firstUnseenIndex &&
-                firstUnseenIndex !== -1 && (
-                  <div className="flex items-center my-14">
-                    <div className="flex-grow border-t" />
-                    <span className="mx-4 text-xs text-slate-500 uppercase tracking-widest">
-                      New posts
-                    </span>
-                    <div className="flex-grow border-t" />
-                  </div>
-                )}
+              New posts available · Tap to refresh
+            </button>
+          </div>
+        )}
 
-              <PostCard
-                post={post}
-                currentUser={user}
-                isSeen={seenPosts.has(post._id)}
-                onDelete={handlePostDeleted}
-              />
+        {posts === null ? (
+          <FeedSkeleton />
+        ) : posts.length === 0 ? (
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+              <div className="p-4 h-[62px]"></div>
+              <div className="w-full aspect-[4/3] bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+                <p className="text-slate-500 dark:text-slate-400 text-sm text-center px-4">
+                  No posts yet.<br />Follow people to see updates ✨
+                </p>
+              </div>
+              <div className="h-[57px]"></div>
+              <div className="h-[90px]"></div>
             </div>
-          ))}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+              <div className="p-4 h-[62px]"></div>
+              <div className="w-full aspect-[4/3] bg-slate-50 dark:bg-slate-900"></div>
+              <div className="h-[57px]"></div>
+              <div className="h-[90px]"></div>
+            </div>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+              <div className="p-4 h-[62px]"></div>
+              <div className="w-full aspect-[4/3] bg-slate-50 dark:bg-slate-900"></div>
+              <div className="h-[57px]"></div>
+              <div className="h-[90px]"></div>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full space-y-6">
+            {posts.map((post, index) => (
+              <div
+                key={post._id}
+                ref={observePost}
+                data-postid={post._id}
+                className={
+                  !seenPosts.has(post._id)
+                    ? 'animate-fade-in-up'
+                    : ''
+                }
+              >
+                {index === firstUnseenIndex &&
+                  firstUnseenIndex !== -1 && (
+                    <div className="flex items-center my-14">
+                      <div className="flex-grow border-t border-slate-200 dark:border-slate-700" />
+                      <span className="mx-4 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                        New posts
+                      </span>
+                      <div className="flex-grow border-t border-slate-200 dark:border-slate-700" />
+                    </div>
+                  )}
 
-          {hasMore && (
-            <div ref={loadMoreRef}>
-              {loadingMore && <PostSkeleton />}
-            </div>
-          )}
-        </>
-      )}
+                <PostCard
+                  post={post}
+                  currentUser={user}
+                  isSeen={seenPosts.has(post._id)}
+                  onDelete={handlePostDeleted}
+                />
+              </div>
+            ))}
+
+            {hasMore && (
+              <div ref={loadMoreRef}>
+                {loadingMore && <PostSkeleton />}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Sidebar column */}
+      <aside className="hidden lg:block">
+        <RightSidebar />
+      </aside>
     </div>
   );
 }

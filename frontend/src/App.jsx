@@ -37,7 +37,6 @@ import FollowersList from './pages/FollowersList';
 import FollowingList from './pages/FollowingList';
 import Profile from './pages/Profile';
 import Hashtag from './pages/Hashtag';
-// import Reels from './pages/Reels';
 import CommunitiesLayout from './pages/CommunitiesLayout';
 import CreateCommunity from './pages/CreateCommunity';
 
@@ -45,10 +44,7 @@ import NotificationBell from './components/NotificationBell';
 import SearchBar from './components/SearchBar';
 import ScrollToTop from './components/ScrollToTop';
 import PostForm from './components/PostForm';
-
-import TrendingHashtags from './components/sidebar/TrendingHashtags';
-import SuggestedUsers from './components/sidebar/SuggestedUsers';
-import SuggestedCommunities from './components/sidebar/SuggestedCommunities';
+import RightSidebar from './components/sidebar/RightSidebar';
 
 /* =========================
    PROTECTED ROUTE
@@ -74,7 +70,7 @@ function Layout({ children }) {
   const { user, logout } = useContext(AuthContext);
   const { unreadMessageCount } = useSocket();
   const { theme, toggleTheme } = useTheme();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const location = useLocation();
 
   const [showCreatePost, setShowCreatePost] = useState(false);
@@ -134,7 +130,7 @@ function Layout({ children }) {
                 className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
               >
                 <Plus size={16} className="inline mr-1" />
-                {t('nav.create')}
+                Create
               </button>
 
               {showCreateMenu && (
@@ -151,7 +147,7 @@ function Layout({ children }) {
                       }}
                       className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300"
                     >
-                      <FileText size={16} /> {t('nav.createPost')}
+                      <FileText size={16} /> Create Post
                     </button>
                     <button
                       onClick={() => {
@@ -160,7 +156,7 @@ function Layout({ children }) {
                       }}
                       className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300"
                     >
-                      <Users size={16} /> {t('nav.createCommunity')}
+                      <Users size={16} /> Create Community
                     </button>
                   </div>
                 </>
@@ -168,7 +164,6 @@ function Layout({ children }) {
             </div>
 
             <NavLink to="/following" active={isActive('/following')} icon={<Home size={20} />} />
-            {/* <NavLink to="/reels" active={isActive('/reels')} icon={<Film size={20} />} /> */}
             <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} />
 
             <NotificationBell />
@@ -250,7 +245,7 @@ function Layout({ children }) {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl shadow-xl">
             <div className="flex justify-between items-center p-4 border-b dark:border-slate-700">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100">{t('nav.createPost')}</h2>
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100">Create Post</h2>
               <button 
                 onClick={() => setShowCreatePost(false)}
                 className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
@@ -272,28 +267,7 @@ function Layout({ children }) {
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="pt-20 max-w-[1200px] mx-auto px-6">
-        <div className="grid grid-cols-12 gap-8">
-
-          {/* CENTER CONTENT */}
-          <div
-            className={`col-span-12 ${
-              isCommunitiesPage ? 'lg:col-span-12' : 'lg:col-span-8'
-            }`}
-          >
-            {children}
-          </div>
-
-          {/* RIGHT SIDEBAR (not on communities) */}
-          {!isCommunitiesPage && (
-            <div className="hidden lg:block col-span-4">
-              <div className="sticky top-24 space-y-4">
-                <TrendingHashtags />
-                <SuggestedUsers />
-                <SuggestedCommunities />
-              </div>
-            </div>
-          )}
-        </div>
+        {children}
       </main>
 
       {/* ================= MOBILE FAB ================= */}
@@ -348,7 +322,6 @@ export default function App() {
               <Route path="/hashtag/:tag" element={<ProtectedRoute><Layout><Hashtag /></Layout></ProtectedRoute>} />
               <Route path="/communities/*" element={<ProtectedRoute><Layout><CommunitiesLayout /></Layout></ProtectedRoute>} />
               <Route path="/communities/create" element={<ProtectedRoute><Layout><CreateCommunity /></Layout></ProtectedRoute>} />
-              {/* <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} /> */}
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
 
               <Route path="/" element={<Navigate to="/following" />} />

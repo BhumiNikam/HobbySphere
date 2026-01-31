@@ -34,29 +34,29 @@ export default function CommunitiesLayout() {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-8">
-      {/* ================= CENTER FEED ================= */}
-      <section className="col-span-12 lg:col-span-8 min-w-0 w-full">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
+      {/* Main content column */}
+      <div className="w-full space-y-12 py-6 min-w-0">
         {selectedCommunity ? (
           <CommunityFeed
             community={selectedCommunity}
             user={user}
           />
         ) : (
-          <div className="bg-white rounded-2xl p-16 text-center border shadow-sm w-full">
-            <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-            <p className="text-slate-600">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-16 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
+            <Users className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+            <p className="text-slate-600 dark:text-slate-400">
               Select a community to view posts
             </p>
           </div>
         )}
-      </section>
+      </div>
 
-      {/* ================= RIGHT SIDEBAR ================= */}
-      <aside className="hidden lg:block col-span-4 flex-shrink-0 w-full">
+      {/* Sidebar column */}
+      <aside className="hidden lg:block">
         <div className="sticky top-24">
-          <div className="bg-white rounded-xl shadow-sm border p-5">
-            <h2 className="font-bold text-lg mb-4">My Communities</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+            <h2 className="font-bold text-lg mb-4 text-slate-900 dark:text-slate-100">My Communities</h2>
 
             <button
               onClick={() => (window.location.href = '/communities/create')}
@@ -66,9 +66,9 @@ export default function CommunitiesLayout() {
             </button>
 
             {loading ? (
-              <p className="text-sm text-slate-500">Loading…</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
             ) : myCommunities.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 You haven't joined any communities yet.
               </p>
             ) : (
@@ -79,8 +79,8 @@ export default function CommunitiesLayout() {
                     onClick={() => setSelectedCommunity(community)}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
                       selectedCommunity?._id === community._id
-                        ? 'bg-indigo-50 text-indigo-600 font-semibold'
-                        : 'hover:bg-slate-50 text-slate-700'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     {community.name}
@@ -128,12 +128,12 @@ function CommunityFeed({ community, user }) {
   );
 
   return (
-    <div className="space-y-6 w-full">
-      <div className="bg-white rounded-xl shadow-sm border p-5 w-full">
+    <div className="w-full space-y-6">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold mb-2">{community.name}</h1>
-            <p className="text-sm text-slate-500">
+            <h1 className="text-2xl font-bold mb-2 text-slate-900 dark:text-slate-100">{community.name}</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {community.memberCount} members
             </p>
           </div>
@@ -146,14 +146,14 @@ function CommunityFeed({ community, user }) {
         </div>
 
         {showAbout && (
-          <div className="mt-4 pt-4 border-t">
-            <p className="text-sm text-slate-600 whitespace-pre-wrap">
+          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
               {community.description}
             </p>
             {community.rules && (
-              <div className="mt-3 bg-slate-50 p-3 rounded-lg">
-                <h4 className="font-semibold text-sm mb-1">Rules</h4>
-                <p className="text-xs text-slate-600 whitespace-pre-wrap">
+              <div className="mt-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                <h4 className="font-semibold text-sm mb-1 text-slate-900 dark:text-slate-100">Rules</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
                   {community.rules}
                 </p>
               </div>
@@ -170,13 +170,13 @@ function CommunityFeed({ community, user }) {
       )}
 
       {loading ? (
-        <div className="bg-white rounded-xl p-12 text-center border shadow-sm">
-          Loading posts…
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
+          <p className="text-slate-600 dark:text-slate-400">Loading posts…</p>
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white rounded-xl p-12 text-center border shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="text-4xl mb-3">📝</div>
-          <p className="text-slate-600">
+          <p className="text-slate-600 dark:text-slate-400">
             {isMember
               ? 'No posts yet. Be the first!'
               : 'Join this community to see posts'}

@@ -4,6 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force scrollbar to always show */
+html {
+  overflow-y: scroll;
+}
+
+/* Use overlay scrollbar that doesn't take space */
+body {
+  scrollbar-gutter: stable;
+}
+
 /* ======================================================
    BASE LAYER – DESIGN TOKENS
    ====================================================== */
@@ -101,9 +111,10 @@
 
   /* -------------------- CARDS -------------------- */
   .card {
-    @apply bg-white rounded-xl border border-slate-200/60;
+    @apply bg-white rounded-xl border border-slate-200/60 w-full;
     box-shadow: var(--shadow-sm);
     transition: all var(--transition-smooth);
+    max-width: 100%;
   }
 
   .card-hover {
@@ -492,6 +503,17 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Prevent layout shift during loading */
+  .content-container {
+    @apply w-full;
+    min-height: 100vh;
+  }
+
+  .post-container {
+    @apply w-full;
+    max-width: 100%;
   }
 }
 

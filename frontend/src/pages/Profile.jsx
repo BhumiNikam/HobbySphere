@@ -97,7 +97,7 @@ export default function Profile() {
   const isOwnProfile = currentUser?.username === profile.username;
 
   return (
-    <div className="pb-12 animate-fade-in">
+    <div className="w-full pb-12 animate-fade-in">
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-card overflow-hidden mb-8">
         <div className="relative h-72 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
           {profile.coverImage && (
@@ -239,7 +239,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="w-full space-y-6">
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 px-1">{t('profile.posts')}</h2>
 
         {posts.length === 0 ? (
@@ -252,7 +252,7 @@ export default function Profile() {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="w-full space-y-6">
             {posts.map((post) => (
               <PostCard key={post._id} post={post} currentUser={currentUser} />
             ))}

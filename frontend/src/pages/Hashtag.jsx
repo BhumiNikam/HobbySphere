@@ -51,23 +51,23 @@ export default function Hashtag() {
   if (loading && posts.length === 0) {
     return (
       <div className="flex justify-center items-center py-24">
-        <div className="text-slate-500">Loading posts…</div>
+        <div className="text-slate-500 dark:text-slate-400">Loading posts…</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 py-6">
+    <div className="w-full space-y-8 py-6">
       {/* HEADER */}
-      <div className="bg-white rounded-2xl p-6 border shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
         <div className="flex items-center gap-4 justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center">
               <Hash size={28} className="text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">#{tag}</h1>
-              <p className="text-slate-500 text-sm">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">#{tag}</h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">
                 {posts.length} posts
               </p>
             </div>
@@ -75,16 +75,16 @@ export default function Hashtag() {
           <button
             aria-label="Close"
             onClick={() => navigate(-1)}
-            className="ml-auto p-2 rounded-full hover:bg-slate-100 transition"
+            className="ml-auto p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition"
           >
-            <X size={24} />
+            <X size={24} className="text-slate-600 dark:text-slate-400" />
           </button>
         </div>
       </div>
 
       {/* POSTS */}
       {posts.length > 0 ? (
-        <>
+        <div className="w-full space-y-6">
           {posts.map((post) => (
             <PostCard
               key={post._id}
@@ -102,9 +102,9 @@ export default function Hashtag() {
               Load more
             </button>
           )}
-        </>
+        </div>
       ) : (
-        <div className="bg-white rounded-2xl p-12 text-center border shadow-sm text-slate-500">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-slate-100 dark:border-slate-700 shadow-sm text-slate-500 dark:text-slate-400">
           No posts found with #{tag}
         </div>
       )}
