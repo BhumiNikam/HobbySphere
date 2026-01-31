@@ -262,18 +262,27 @@ export default function PostForm({ onPostCreated, communityId = null }) {
         {previews.length > 0 && (
           <div className={`grid gap-3 ${previews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
             {previews.map((preview, i) => (
-              <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+              <div 
+                key={i} 
+                className={`relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 ${
+                  previews.length === 1 ? 'max-h-96' : ''
+                }`}
+              >
                 {preview.type === 'video' ? (
                   <video
                     src={preview.url}
                     controls
-                    className="w-full h-48 object-cover bg-black"
+                    className={`w-full object-contain bg-black ${
+                      previews.length === 1 ? 'max-h-96' : 'h-48'
+                    }`}
                   />
                 ) : (
                   <img
                     src={preview.url}
                     alt="preview"
-                    className="w-full h-48 object-cover"
+                    className={`w-full object-cover ${
+                      previews.length === 1 ? 'max-h-96' : 'h-48'
+                    }`}
                   />
                 )}
                 <button

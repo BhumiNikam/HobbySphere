@@ -14,8 +14,14 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ message: 'Post content is required' });
     }
 
-    if (!communityId) {
-      return res.status(400).json({ message: 'Community is required' });
+    // ✅ Community is now OPTIONAL - allow posting to profile
+    // If communityId is provided, validate it exists
+    if (communityId) {
+      const Community = require('../models/Community');
+      const communityExists = await Community.findById(communityId);
+      if (!communityExists) {
+        return res.status(404).json({ message: 'Community not found' });
+      }
     }
 
     /* ===== UPLOAD MEDIA ===== */
@@ -52,13 +58,20 @@ exports.createPost = async (req, res) => {
     /* ===== HASHTAGS ===== */
     const hashtags = content.match(/#([\w-]+)/g) || [];
 
-    const post = await Post.create({
+    // ✅ Create post with optional community
+    const postData = {
       content,
       author: req.user._id,
-      community: communityId,
       images,
       hashtags: hashtags.map((t) => t.toLowerCase()),
-    });
+    };
+
+    // Only add community if provided
+    if (communityId) {
+      postData.community = communityId;
+    }
+
+    const post = await Post.create(postData);
 
     const populatedPost = await Post.findById(post._id)
       .populate('author', 'username fullName profileImage')
@@ -70,6 +83,7 @@ exports.createPost = async (req, res) => {
 
     res.status(201).json(populatedPost);
   } catch (error) {
+    console.error('Create post error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

@@ -34,16 +34,16 @@ export default function CreatePostModal({ onClose }) {
       <div
         onClick={(e) => e.stopPropagation()}
         className="
-          bg-white rounded-2xl
+          bg-white dark:bg-slate-900 rounded-2xl
           w-full max-w-xl
           shadow-2xl
           animate-scale-in
           overflow-hidden
         "
       >
-        {/* ================= HEADER ================= */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-slate-900">
+        {/* HEADER */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             Create Post
           </h2>
 
@@ -51,23 +51,21 @@ export default function CreatePostModal({ onClose }) {
             onClick={onClose}
             className="
               p-2 rounded-full
-              hover:bg-slate-100
+              hover:bg-slate-100 dark:hover:bg-slate-800
               transition
               active:scale-95
             "
             aria-label="Close"
           >
-            <X size={20} />
+            <X size={20} className="text-slate-600 dark:text-slate-400" />
           </button>
         </div>
 
-        {/* ================= BODY ================= */}
+        {/* BODY */}
         <div className="px-6 py-5">
           <PostForm
             onPostCreated={() => {
               onClose();
-              // 🔥 Best UX: parent feed already listens to custom event
-              // No hard refresh needed
             }}
           />
         </div>
