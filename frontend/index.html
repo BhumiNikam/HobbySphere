@@ -2,9 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    
+    <!-- Favicon - Multiple sizes for better browser support -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="description" content="HobbySphere - Connect with your passions and interests" />
+    
     <title>HobbySphere</title>
+    
     <style>
       /* Critical CSS - loads before React */
       .initial-skeleton {
@@ -14,11 +25,34 @@
         display: none;
       }
       
-      /* Skeleton styles */
+      /* Skeleton styles with dark mode support */
       .skeleton-container {
         min-height: 100vh;
         background: #f8f9fb;
         padding-top: 80px;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        .skeleton-container {
+          background: #0f172a;
+        }
+        .skeleton-post,
+        .skeleton-widget {
+          background: #1e293b;
+          border-color: #334155;
+        }
+        .skeleton-avatar,
+        .skeleton-line,
+        .skeleton-image,
+        .skeleton-icon {
+          background: #334155;
+        }
+        .skeleton-widget-item {
+          background: #1e293b;
+        }
+        .skeleton-actions {
+          border-bottom-color: #334155;
+        }
       }
       
       .skeleton-wrapper {
@@ -135,6 +169,18 @@
         }
         .skeleton-main {
           max-width: 100%;
+        }
+        .skeleton-container {
+          padding-top: 120px;
+        }
+      }
+      
+      @media (max-width: 640px) {
+        .skeleton-wrapper {
+          padding: 0 16px;
+        }
+        .skeleton-container {
+          padding-top: 140px;
         }
       }
     </style>

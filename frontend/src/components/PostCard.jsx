@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next'; // ← STEP 1: Added import
+import { useTranslation } from 'react-i18next';
 import CommentSection from './CommentSection';
 import {
   Heart,
@@ -16,7 +16,7 @@ import { useSocket } from '../context/SocketContext';
 export default function PostCard({ post, currentUser, onDelete, isSeen }) {
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const { t } = useTranslation(); // ← STEP 2: Added translation hook
+  const { t } = useTranslation();
   const menuRef = useRef(null);
 
   if (!post?.author || !currentUser) return null;
@@ -119,7 +119,6 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
   };
 
   const handleDelete = async () => {
-    // ← STEP 3: Translated confirm message
     if (!window.confirm(t('post.delete') + '?')) return;
     try {
       await API.delete(`/posts/${post._id}`);
@@ -148,58 +147,58 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
     <article
       className={`
         group
-        bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/60
-        shadow-card hover:shadow-card-hover
+        bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800
+        shadow-sm hover:shadow-md dark:hover:shadow-xl dark:hover:shadow-black/20
         transition-all duration-300 ease-out
         hover:-translate-y-0.5
         ${isSeen ? 'opacity-90' : ''}
       `}
     >
       {/* HEADER */}
-      <div className="flex items-center justify-between p-4">
+      <div className="flex items-center justify-between p-3 sm:p-4">
         <div
           onClick={() => navigate(`/profile/${post.author.username}`)}
-          className="flex items-center gap-3 cursor-pointer group/author"
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer group/author flex-1 min-w-0"
         >
-          <div className="relative">
+          <div className="relative flex-shrink-0">
             <img
               src={post.author.profileImage}
               alt={post.author.username}
-              className="w-11 h-11 rounded-full object-cover ring-2 ring-white dark:ring-slate-800 shadow-sm
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow-sm
                          group-hover/author:ring-indigo-100 dark:group-hover/author:ring-indigo-900 transition-all"
             />
             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 
                             opacity-0 group-hover/author:opacity-100 transition-opacity" />
           </div>
-          <div>
-            <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 group-hover/author:text-indigo-600 dark:group-hover/author:text-indigo-400 transition-colors">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 group-hover/author:text-indigo-600 dark:group-hover/author:text-indigo-400 transition-colors truncate">
               {post.author.username}
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
               {new Date(post.createdAt).toLocaleDateString()}
             </p>
           </div>
         </div>
 
         {userId === post.author._id?.toString() && (
-          <div className="relative" ref={menuRef}>
+          <div className="relative flex-shrink-0" ref={menuRef}>
             <button
               onClick={() => setShowMenu((p) => !p)}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+              className="p-1.5 sm:p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
             >
               <MoreVertical size={18} />
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700
+              <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-100 dark:border-slate-800
                               overflow-hidden z-20 animate-scale-in">
                 <button
                   onClick={handleDelete}
-                  className="flex items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 w-full 
+                  className="flex items-center gap-2.5 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full 
                              transition-colors"
                 >
                   <Trash2 size={16} />
-                  {t('post.delete')} {/* ← STEP 3: Translated */}
+                  {t('post.delete')}
                 </button>
               </div>
             )}
@@ -213,7 +212,7 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
           {post.images[0].type === 'video' ? (
             <video
               controls
-              className="w-full max-h-[600px] object-contain"
+              className="w-full max-h-[400px] sm:max-h-[520px] lg:max-h-[600px] object-contain"
               src={post.images[0].url}
             >
               Your browser doesn't support video.
@@ -222,15 +221,15 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
             <img
               src={post.images[0].url}
               alt="post"
-              className="w-full max-h-[520px] object-contain"
+              className="w-full max-h-[400px] sm:max-h-[520px] object-contain"
               draggable={false}
             />
           )}
 
           {likeBurst && (
             <Heart
-              size={100}
-              className="absolute inset-0 m-auto text-white drop-shadow-2xl animate-like-pop pointer-events-none"
+              size={80}
+              className="absolute inset-0 m-auto text-white drop-shadow-2xl animate-like-pop pointer-events-none sm:w-[100px] sm:h-[100px]"
               fill="currentColor"
               strokeWidth={1.5}
             />
@@ -239,61 +238,60 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
       )}
 
       {/* ACTIONS */}
-      <div className="flex items-center gap-1 px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+      <div className="flex items-center gap-0.5 sm:gap-1 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 dark:border-slate-800">
         <button
           onClick={handleLike}
           className={`
-            p-2.5 rounded-xl transition-all duration-200
+            p-2 sm:p-2.5 rounded-xl transition-all duration-200 tap-target
             ${isLiked 
               ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20' 
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-red-500'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-red-500 dark:hover:text-red-400'
             }
           `}
           title={t('post.like')}
         >
-          <Heart size={22} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2.5} />
+          <Heart size={20} className="sm:w-[22px] sm:h-[22px]" fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2.5} />
         </button>
 
         <button
           onClick={() => setShowComments((p) => !p)}
-          className="p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
+          className="p-2 sm:p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all tap-target"
           title={t('post.comment')}
         >
-          <MessageCircle size={22} strokeWidth={2.5} />
+          <MessageCircle size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
         </button>
 
         <button 
-          className="p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
+          className="p-2 sm:p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all tap-target"
           title={t('post.share')}
         >
-          <Share2 size={22} strokeWidth={2.5} />
+          <Share2 size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
         </button>
 
         <button
           className={`
-            ml-auto p-2.5 rounded-xl transition-all duration-200
+            ml-auto p-2 sm:p-2.5 rounded-xl transition-all duration-200 tap-target
             ${isBookmarked 
-              ? 'text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20' 
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400'
+              ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20' 
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400'
             }
           `}
           title={t('post.save')}
         >
-          <Bookmark size={22} fill={isBookmarked ? 'currentColor' : 'none'} strokeWidth={2.5} />
+          <Bookmark size={20} className="sm:w-[22px] sm:h-[22px]" fill={isBookmarked ? 'currentColor' : 'none'} strokeWidth={2.5} />
         </button>
       </div>
 
       {/* LIKES & INFO */}
-      <div className="px-4 pt-3">
+      <div className="px-3 sm:px-4 pt-2.5 sm:pt-3">
         {likes > 0 && (
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
-            {/* ← STEP 3: Translated likes text */}
             {likes.toLocaleString()} {likes === 1 ? t('post.like') : t('post.like') + 's'}
           </p>
         )}
         
         {post.content && (
-          <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+          <div className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 break-words">
             <span className="font-semibold text-slate-900 dark:text-slate-100 mr-1.5">{post.author.username}</span>
             {renderContent(post.content)}
           </div>
@@ -304,7 +302,6 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
             onClick={() => setShowComments((p) => !p)}
             className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2 transition-colors"
           >
-            {/* ← STEP 3: Translated view comments text */}
             {t('common.viewMore')} {commentCount} {commentCount === 1 ? t('post.comment') : t('post.comment') + 's'}
           </button>
         )}
@@ -312,7 +309,7 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
 
       {/* COMMENTS */}
       {showComments && (
-        <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-700 mt-3">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-slate-100 dark:border-slate-800 mt-3">
           <CommentSection
             postId={post._id}
             currentUser={currentUser}

@@ -10,6 +10,8 @@ import {
   Moon,
   Sun,
   Languages,
+  Menu,
+  X,
 } from 'lucide-react';
 import {
   BrowserRouter,
@@ -54,8 +56,8 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500">
-        Loading…
+      <div className="min-h-screen flex items-center justify-center text-slate-500 dark:text-slate-400">
+        <div className="spinner" />
       </div>
     );
   }
@@ -76,19 +78,17 @@ function Layout({ children }) {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showFab, setShowFab] = useState(true);
 
   const isActive = (path) => location.pathname.startsWith(path);
-
-  // 🔥 KEY LINE — detect communities pages
-  const isCommunitiesPage = location.pathname.startsWith('/communities');
 
   const changeLanguage = (lang) => {
     i18n.changeLanguage(lang);
     setShowLangMenu(false);
   };
 
-  /* FAB show / hide */
+  /* FAB show / hide on scroll */
   useEffect(() => {
     let lastScrollY = window.scrollY;
     const onScroll = () => {
@@ -99,161 +99,291 @@ function Layout({ children }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  /* Close mobile menu on route change */
+  useEffect(() => {
+    setShowMobileMenu(false);
+  }, [location.pathname]);
+
   return (
-    <div className="min-h-screen bg-[#f8f9fb] dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
 
       {/* ================= NAVBAR ================= */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/90 dark:bg-slate-800/90 backdrop-blur border-b border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+      <nav className="fixed top-0 inset-x-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
 
-          {/* Brand */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold">
-              H
+            {/* Left: Brand + Mobile Menu */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="lg:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
+              >
+                {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
+              </button>
+
+              {/* Brand */}
+              <Link to="/" className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-md">
+                  H
+                </div>
+                <span className="hidden sm:block font-bold tracking-tight text-slate-900 dark:text-slate-100 text-lg">
+                  HobbySphere
+                </span>
+              </Link>
             </div>
-            <span className="hidden sm:block font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              HobbySphere
-            </span>
-          </Link>
 
-          {/* Search */}
-          <div className="hidden md:block w-full max-w-md mx-8">
-            <SearchBar />
+            {/* Center: Search (Desktop) */}
+            <div className="hidden lg:block flex-1 max-w-md mx-8">
+              <SearchBar />
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              {/* Desktop Navigation */}
+              <div className="hidden lg:flex items-center gap-1">
+                {/* Create Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowCreateMenu(!showCreateMenu)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
+                  >
+                    <Plus size={16} />
+                    <span className="hidden xl:inline">Create</span>
+                  </button>
+
+                  {showCreateMenu && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowCreateMenu(false)}
+                      />
+                      <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-20 overflow-hidden">
+                        <button
+                          onClick={() => {
+                            setShowCreateMenu(false);
+                            setShowCreatePost(true);
+                          }}
+                          className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 transition-colors"
+                        >
+                          <FileText size={16} /> Create Post
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowCreateMenu(false);
+                            window.location.href = '/communities/create';
+                          }}
+                          className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 transition-colors"
+                        >
+                          <Users size={16} /> Create Community
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <NavLink to="/following" active={isActive('/following')} icon={<Home size={20} />} label="Home" />
+                <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label="Communities" />
+              </div>
+
+              {/* Notifications */}
+              <NotificationBell />
+
+              {/* Messages */}
+              <Link to="/messages" className="nav-link relative">
+                <MessageCircle size={20} />
+                {unreadMessageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-semibold">
+                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Profile */}
+              <Link to={`/profile/${user?.username}`} className="nav-link">
+                <User size={20} />
+              </Link>
+
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="nav-link"
+                title="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
+              {/* Language Selector */}
+              <div className="relative hidden sm:block">
+                <button
+                  onClick={() => setShowLangMenu(!showLangMenu)}
+                  className="nav-link"
+                  title="Change language"
+                >
+                  <Languages size={20} />
+                </button>
+
+                {showLangMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowLangMenu(false)}
+                    />
+                    <div className="dropdown">
+                      <button onClick={() => changeLanguage('en')} className="dropdown-item">
+                        English
+                      </button>
+                      <button onClick={() => changeLanguage('hi')} className="dropdown-item">
+                        हिंदी (Hindi)
+                      </button>
+                      <button onClick={() => changeLanguage('mr')} className="dropdown-item">
+                        मराठी (Marathi)
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Logout */}
+              <button
+                onClick={logout}
+                className="nav-link text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                title="Logout"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1">
-            {/* Create */}
-            <div className="relative hidden md:block">
-              <button
-                onClick={() => setShowCreateMenu(!showCreateMenu)}
-                className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
-              >
-                <Plus size={16} className="inline mr-1" />
-                Create
-              </button>
-
-              {showCreateMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowCreateMenu(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl shadow-lg z-20 overflow-hidden">
-                    <button
-                      onClick={() => {
-                        setShowCreateMenu(false);
-                        setShowCreatePost(true);
-                      }}
-                      className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300"
-                    >
-                      <FileText size={16} /> Create Post
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowCreateMenu(false);
-                        window.location.href = '/communities/create';
-                      }}
-                      className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300"
-                    >
-                      <Users size={16} /> Create Community
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <NavLink to="/following" active={isActive('/following')} icon={<Home size={20} />} />
-            <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} />
-
-            <NotificationBell />
-
-            <Link to="/messages" className="nav-link relative">
-              <MessageCircle size={20} />
-              {unreadMessageCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                </span>
-              )}
-            </Link>
-
-            <Link to={`/profile/${user?.username}`} className="nav-link">
-              <User size={20} />
-            </Link>
-
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="nav-link"
-              title="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-
-            {/* Language Selector */}
-            <div className="relative">
-              <button
-                onClick={() => setShowLangMenu(!showLangMenu)}
-                className="nav-link"
-                title="Change language"
-              >
-                <Languages size={20} />
-              </button>
-
-              {showLangMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowLangMenu(false)}
-                  />
-                  <div className="dropdown">
-                    <button
-                      onClick={() => changeLanguage('en')}
-                      className="dropdown-item"
-                    >
-                      English
-                    </button>
-                    <button
-                      onClick={() => changeLanguage('hi')}
-                      className="dropdown-item"
-                    >
-                      हिंदी (Hindi)
-                    </button>
-                    <button
-                      onClick={() => changeLanguage('mr')}
-                      className="dropdown-item"
-                    >
-                      मराठी (Marathi)
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <button
-              onClick={logout}
-              className="nav-link text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-            >
-              <LogOut size={20} />
-            </button>
+          {/* Mobile Search Bar */}
+          <div className="lg:hidden pb-3 pt-1">
+            <SearchBar />
           </div>
         </div>
       </nav>
 
+      {/* ================= MOBILE MENU ================= */}
+      {showMobileMenu && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowMobileMenu(false)}
+          />
+          <div className="absolute left-0 top-[57px] sm:top-[65px] bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl animate-slide-in-left">
+            <div className="flex flex-col p-4 space-y-2">
+              <Link
+                to="/following"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                  isActive('/following')
+                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Home size={20} />
+                Home
+              </Link>
+
+              <Link
+                to="/communities"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                  isActive('/communities')
+                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Users size={20} />
+                Communities
+              </Link>
+
+              <Link
+                to="/messages"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <MessageCircle size={20} />
+                Messages
+                {unreadMessageCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  </span>
+                )}
+              </Link>
+
+              <Link
+                to={`/profile/${user?.username}`}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <User size={20} />
+                Profile
+              </Link>
+
+              <div className="divider" />
+
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  setShowCreatePost(true);
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <FileText size={20} />
+                Create Post
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  window.location.href = '/communities/create';
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <Users size={20} />
+                Create Community
+              </button>
+
+              <div className="divider" />
+
+              <div className="px-4 py-2">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Language</p>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => { changeLanguage('en'); setShowMobileMenu(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => { changeLanguage('hi'); setShowMobileMenu(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  >
+                    हिंदी
+                  </button>
+                  <button
+                    onClick={() => { changeLanguage('mr'); setShowMobileMenu(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  >
+                    मराठी
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ================= CREATE POST MODAL ================= */}
       {showCreatePost && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl shadow-xl">
-            <div className="flex justify-between items-center p-4 border-b dark:border-slate-700">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100">Create Post</h2>
-              <button 
+        <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+              <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Create Post</h2>
+              <button
                 onClick={() => setShowCreatePost(false)}
-                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
               >
-                ✕
+                <X size={20} />
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-4 sm:p-6">
               <PostForm
                 onPostCreated={() => {
                   setShowCreatePost(false);
@@ -266,17 +396,17 @@ function Layout({ children }) {
       )}
 
       {/* ================= MAIN CONTENT ================= */}
-      <main className="pt-20 max-w-[1200px] mx-auto px-6">
+      <main className="pt-[120px] sm:pt-24 lg:pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 lg:pb-8">
         {children}
       </main>
 
       {/* ================= MOBILE FAB ================= */}
       {showFab && (
         <button
-          onClick={() => setShowCreateMenu(true)}
-          className="fixed bottom-6 right-6 md:hidden bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-50"
+          onClick={() => setShowCreatePost(true)}
+          className="fixed bottom-6 right-6 lg:hidden bg-gradient-to-r from-indigo-600 to-purple-600 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center z-40 transition-all hover:scale-110 active:scale-95"
         >
-          <Plus />
+          <Plus size={24} />
         </button>
       )}
 
@@ -288,13 +418,15 @@ function Layout({ children }) {
 /* =========================
    NAV LINK
 ========================= */
-function NavLink({ to, icon, active }) {
+function NavLink({ to, icon, active, label }) {
   return (
     <Link
       to={to}
       className={`nav-link ${active ? 'active' : ''}`}
+      title={label}
     >
       {icon}
+      <span className="hidden xl:inline text-sm">{label}</span>
     </Link>
   );
 }
@@ -308,7 +440,16 @@ export default function App() {
       <AuthProvider>
         <SocketProvider>
           <BrowserRouter>
-            <Toaster position="top-right" />
+            <Toaster 
+              position="top-right" 
+              toastOptions={{
+                className: 'dark:bg-slate-800 dark:text-slate-100',
+                style: {
+                  background: 'var(--toast-bg)',
+                  color: 'var(--toast-color)',
+                }
+              }}
+            />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
