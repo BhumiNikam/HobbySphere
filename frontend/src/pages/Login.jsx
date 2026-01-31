@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Eye, EyeOff, UserCircle } from 'lucide-react';
-import axios from 'axios';
+import API from '../services/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -41,14 +41,18 @@ export default function Login() {
   const handleGuestLogin = async () => {
     setGuestLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/guest-login');
+      const res = await API.post('/auth/guest-login');
+
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
+
       toast.success('👤 Logged in as Guest!');
       navigate('/communities');
+
       window.location.reload();
     } catch (err) {
-      toast.error('Guest login failed');
+      const message = err.response?.data?.message || 'Guest login failed';
+      toast.error(message);
     } finally {
       setGuestLoading(false);
     }
