@@ -176,7 +176,6 @@ export default function FollowingFeed() {
   ) ?? -1;
 
   return (
-    // EXACT same grid as CommunitiesLayout
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
       {/* Main content column */}
       <div className="w-full space-y-12 py-6 min-w-0">
@@ -194,28 +193,15 @@ export default function FollowingFeed() {
         {posts === null ? (
           <FeedSkeleton />
         ) : posts.length === 0 ? (
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-              <div className="p-4 h-[62px]"></div>
-              <div className="w-full aspect-[4/3] bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-                <p className="text-slate-500 dark:text-slate-400 text-sm text-center px-4">
-                  No posts yet.<br />Follow people to see updates ✨
-                </p>
-              </div>
-              <div className="h-[57px]"></div>
-              <div className="h-[90px]"></div>
-            </div>
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-              <div className="p-4 h-[62px]"></div>
-              <div className="w-full aspect-[4/3] bg-slate-50 dark:bg-slate-900"></div>
-              <div className="h-[57px]"></div>
-              <div className="h-[90px]"></div>
-            </div>
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-              <div className="p-4 h-[62px]"></div>
-              <div className="w-full aspect-[4/3] bg-slate-50 dark:bg-slate-900"></div>
-              <div className="h-[57px]"></div>
-              <div className="h-[90px]"></div>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-12 text-center">
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="text-6xl">👥</div>
+              <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200">
+                No posts yet
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400">
+                Follow people to see their updates in your feed ✨
+              </p>
             </div>
           </div>
         ) : (
