@@ -166,7 +166,7 @@ export default function NotificationBell() {
 
   /* ================= UI ================= */
   return (
-    <div className="relative z-50" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef}>
       {/* BELL */}
       <button
         onClick={() => setIsOpen((p) => !p)}
@@ -202,7 +202,7 @@ export default function NotificationBell() {
         <>
           {/* Mobile backdrop */}
           <div 
-            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm z-[100] sm:hidden"
+            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm z-[9998] sm:hidden"
             onClick={() => setIsOpen(false)}
           />
 
@@ -210,27 +210,22 @@ export default function NotificationBell() {
           <div
             className="
               fixed sm:absolute
-              left-0 right-0 bottom-0 sm:left-auto sm:right-0 sm:bottom-auto sm:top-full sm:mt-2
+              left-0 right-0 top-[64px] sm:left-auto sm:right-0 sm:top-full sm:mt-2
               w-full sm:w-96
               bg-white dark:bg-slate-900
-              rounded-t-3xl sm:rounded-2xl
+              rounded-b-3xl sm:rounded-2xl
               shadow-2xl 
-              border-t-2 sm:border-t sm:border 
+              border sm:border 
               border-slate-200 dark:border-slate-700
               overflow-hidden
-              z-[101]
+              z-[9999]
             "
             style={{
-              maxHeight: window.innerWidth < 640 ? 'calc(100vh - 60px)' : '85vh',
+              maxHeight: window.innerWidth < 640 ? 'calc(100vh - 64px)' : '85vh',
             }}
           >
-            {/* Drag handle for mobile */}
-            <div className="sm:hidden flex justify-center pt-2 pb-1">
-              <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
-            </div>
-
             {/* HEADER */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">
                 Notifications
               </h3>
@@ -258,7 +253,7 @@ export default function NotificationBell() {
             <div 
               className="overflow-y-auto"
               style={{
-                maxHeight: window.innerWidth < 640 ? 'calc(100vh - 140px)' : '460px',
+                maxHeight: window.innerWidth < 640 ? 'calc(100vh - 132px)' : '460px',
               }}
             >
               {notifications.length === 0 ? (
@@ -328,9 +323,6 @@ export default function NotificationBell() {
                 ))
               )}
             </div>
-
-            {/* Safe area spacer for mobile */}
-            <div className="h-safe sm:hidden bg-white dark:bg-slate-900" style={{ height: '20px' }} />
           </div>
         </>
       )}
