@@ -331,13 +331,25 @@ function Layout({ children }) {
               <Link
                 to="/"
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                  location.pathname === '/' || location.pathname === '/following'
+                  location.pathname === '/'
                     ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
                     : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <HomeIcon size={20} />
                 {t('nav.home')}
+              </Link>
+
+              <Link
+                to="/following"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                  location.pathname === '/following'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <UserCheck size={20} />
+                {t('nav.following')}
               </Link>
 
               <Link
