@@ -12,6 +12,7 @@ import {
   Languages,
   Menu,
   X,
+  UserCheck, // ADDED
 } from 'lucide-react';
 import {
   BrowserRouter,
@@ -184,6 +185,7 @@ function Layout({ children }) {
                 </div>
 
                 <NavLink to="/" active={location.pathname === '/'} icon={<Home size={20} />} label="Home" />
+                <NavLink to="/following" active={location.pathname === '/following'} icon={<UserCheck size={20} />} label="Following" />
                 <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label="Communities" />
               </div>
 
@@ -282,6 +284,18 @@ function Layout({ children }) {
               >
                 <Home size={20} />
                 Home
+              </Link>
+
+              <Link
+                to="/following"
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                  location.pathname === '/following'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <UserCheck size={20} />
+                Following
               </Link>
 
               <Link
