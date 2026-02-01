@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +6,10 @@ import API from '../services/api';
 import PostCard from '../components/PostCard';
 import PostForm from '../components/PostForm';
 import toast from 'react-hot-toast';
-import { Info, Trash2, Users as UsersIcon, TrendingUp, Tag } from 'lucide-react';
+import { Info, Trash2, Users as UsersIcon, TrendingUp, Tag, Crown } from 'lucide-react';
+
+// ✅ Cache for community data
+const communityCache = new Map();
 
 export default function CommunityPage() {
   const { id } = useParams();
@@ -25,18 +28,36 @@ export default function CommunityPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    fetchCommunity();
-    fetchPosts();
-    fetchMembers();
+    // ✅ Check cache first
+    const cached = communityCache.get(id);
+    if (cached && Date.now() - cached.timestamp < 60000) { // Cache for 1 minute
+      setCommunity(cached.data);
+      setIsMember(cached.data.isMember);
+      setIsCreator(cached.data.isCreator);
+      setLoading(false);
+      fetchPosts();
+      if (showMembers) fetchMembers();
+    } else {
+      fetchCommunity();
+      fetchPosts();
+    }
   }, [id]);
 
   const fetchCommunity = async () => {
     try {
       const res = await API.get(`/communities/${id}`);
-      setCommunity(res.data);
-      const memberIds = res.data.members.map(m => m.toString());
-      setIsMember(memberIds.includes(user._id) || res.data.isMember);
-      setIsCreator(res.data.creator._id === user._id || res.data.isCreator);
+      const communityData = res.data;
+      
+      // ✅ Cache the data
+      communityCache.set(id, {
+        data: communityData,
+        timestamp: Date.now()
+      });
+      
+      setCommunity(communityData);
+      const memberIds = communityData.members.map(m => m.toString());
+      setIsMember(memberIds.includes(user._id) || communityData.isMember);
+      setIsCreator(communityData.creator._id === user._id || communityData.isCreator);
       setLoading(false);
     } catch (error) {
       toast.error(t('community.failedToLoad') || 'Failed to load community');
@@ -56,7 +77,7 @@ export default function CommunityPage() {
   const fetchMembers = async () => {
     try {
       const res = await API.get(`/communities/${id}/members`);
-      setMembers(res.data || []);
+      setMembers(res.data.members || res.data);
     } catch (error) {
       console.error('Failed to fetch members:', error);
     }
@@ -67,8 +88,8 @@ export default function CommunityPage() {
       await API.post(`/communities/${id}/join`);
       toast.success(t('community.joined') || 'Joined community!');
       setIsMember(true);
+      communityCache.delete(id); // Clear cache
       fetchCommunity();
-      fetchMembers();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to join');
     }
@@ -79,8 +100,8 @@ export default function CommunityPage() {
       await API.post(`/communities/${id}/leave`);
       toast.success(t('community.left') || 'Left community');
       setIsMember(false);
+      communityCache.delete(id); // Clear cache
       fetchCommunity();
-      fetchMembers();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to leave');
     }
@@ -89,6 +110,7 @@ export default function CommunityPage() {
   const handleDeleteCommunity = async () => {
     try {
       await API.delete(`/communities/${id}`);
+      communityCache.delete(id); // Clear cache
       toast.success(t('community.deleted') || 'Community deleted successfully');
       navigate('/communities');
     } catch (error) {
@@ -98,12 +120,22 @@ export default function CommunityPage() {
 
   const handlePostCreated = (newPost) => {
     setPosts([newPost, ...posts]);
-    fetchPosts();
   };
 
   const handlePostDeleted = (postId) => {
     setPosts(posts.filter(p => p._id !== postId));
   };
+
+  // ✅ Memoized active members calculation
+  const activeMembers = useMemo(() => {
+    return posts.reduce((acc, post) => {
+      const daysSincePost = (Date.now() - new Date(post.createdAt)) / (1000 * 60 * 60 * 24);
+      if (daysSincePost <= 7 && !acc.includes(post.author._id)) {
+        acc.push(post.author._id);
+      }
+      return acc;
+    }, []).length;
+  }, [posts]);
 
   if (loading) return (
     <div className="flex items-center justify-center py-24">
@@ -117,15 +149,6 @@ export default function CommunityPage() {
     </div>
   );
 
-  // Calculate active members (posted in last 7 days)
-  const activeMembers = posts.reduce((acc, post) => {
-    const daysSincePost = (Date.now() - new Date(post.createdAt)) / (1000 * 60 * 60 * 24);
-    if (daysSincePost <= 7 && !acc.includes(post.author._id)) {
-      acc.push(post.author._id);
-    }
-    return acc;
-  }, []).length;
-
   return (
     <div className="w-full pb-12">
       {/* COMMUNITY HEADER */}
@@ -134,7 +157,35 @@ export default function CommunityPage() {
           backgroundImage: community.coverImage?.url ? `url(${community.coverImage.url})` : undefined,
           backgroundSize: 'cover'
         }} />
+        
         <div className="p-6">
+          {/* ✅ CREATOR INFO AT TOP */}
+          <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100 dark:border-slate-700">
+            <img
+              src={community.creator?.profileImage || `https://ui-avatars.com/api/?name=${community.creator?.fullName}&background=6366f1&color=fff`}
+              alt={community.creator?.fullName}
+              className="w-12 h-12 rounded-full ring-2 ring-indigo-500"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{community.creator?.fullName}</p>
+                <Crown size={16} className="text-yellow-500" />
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">@{community.creator?.username} • Creator</p>
+            </div>
+            {/* ✅ DELETE BUTTON FOR CREATOR */}
+            {isCreator && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 text-sm font-medium transition flex items-center gap-2"
+                title={t('community.delete') || 'Delete Community'}
+              >
+                <Trash2 size={16} />
+                Delete
+              </button>
+            )}
+          </div>
+
           <div className="flex justify-between items-start mb-3">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -157,7 +208,10 @@ export default function CommunityPage() {
                 </button>
 
                 <button
-                  onClick={() => setShowMembers(!showMembers)}
+                  onClick={() => {
+                    setShowMembers(!showMembers);
+                    if (!showMembers && members.length === 0) fetchMembers();
+                  }}
                   className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition"
                   title={t('community.members') || 'Members'}
                 >
@@ -180,18 +234,9 @@ export default function CommunityPage() {
             
             <div className="flex gap-2">
               {isCreator ? (
-                <>
-                  <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-5 py-2 rounded-lg font-semibold text-sm">
-                    {t('community.creator') || 'Creator'}
-                  </span>
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 text-sm font-medium transition flex items-center gap-2"
-                    title={t('community.delete') || 'Delete Community'}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </>
+                <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-5 py-2 rounded-lg font-semibold text-sm">
+                  {t('community.creator') || 'Creator'}
+                </span>
               ) : isMember ? (
                 <button 
                   onClick={handleLeave} 
@@ -220,37 +265,6 @@ export default function CommunityPage() {
                 <p className="text-slate-600 dark:text-slate-300">{community.description}</p>
               </div>
 
-              {/* Admin/Creator Info */}
-              <div>
-                <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-2">
-                  {t('community.admin') || 'Administrator'}
-                </h3>
-                <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
-                  <img
-                    src={community.creator?.profileImage || `https://ui-avatars.com/api/?name=${community.creator?.fullName}&background=6366f1&color=fff`}
-                    alt={community.creator?.fullName}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <div>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{community.creator?.fullName}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">@{community.creator?.username}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Category */}
-              {community.category && (
-                <div>
-                  <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-2">
-                    {t('community.category') || 'Category'}
-                  </h3>
-                  <span className="inline-flex items-center gap-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-lg text-sm font-medium">
-                    <Tag size={14} />
-                    {community.category}
-                  </span>
-                </div>
-              )}
-
               {/* Rules */}
               {community.rules && (
                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg">
@@ -267,7 +281,7 @@ export default function CommunityPage() {
           {showMembers && (
             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
               <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-3">
-                {t('community.membersList') || 'Members'} ({members.length})
+                {t('community.membersList') || 'Members'} ({members.length || community.memberCount})
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
                 {members.map((member) => (

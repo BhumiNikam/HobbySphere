@@ -21,7 +21,7 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
 
   if (!post?.author || !currentUser) return null;
 
-  const userId = currentUser?.id;
+  const userId = currentUser?.id || currentUser?._id;
 
   const hasUserLiked = (likes = []) =>
     likes.some((like) => {
@@ -143,6 +143,9 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
       return <span key={i}>{part}</span>;
     });
 
+  // ✅ FIX: Check if current user is the post author
+  const isPostAuthor = post.author._id?.toString() === userId || post.author._id === userId;
+
   return (
     <article
       className={`
@@ -180,7 +183,8 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
           </div>
         </div>
 
-        {userId === post.author._id?.toString() && (
+        {/* ✅ FIX: Show delete menu only for post author */}
+        {isPostAuthor && (
           <div className="relative flex-shrink-0" ref={menuRef}>
             <button
               onClick={() => setShowMenu((p) => !p)}
@@ -206,7 +210,7 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
         )}
       </div>
 
-      {/* ✅ MEDIA - Maintains original aspect ratio */}
+      {/* MEDIA */}
       {post.images?.length > 0 && (
         <div 
           onDoubleClick={handleMediaDoubleClick} 
