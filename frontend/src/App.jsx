@@ -145,15 +145,15 @@ function Layout({ children }) {
                 {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
               </button>
 
-              {/* Brand - NOT A HOME LINK, JUST LOGO */}
-              <div className="flex items-center gap-2 sm:gap-3">
+              {/* Brand - CLICKABLE HOME LINK */}
+              <Link to="/" className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-md">
                   H
                 </div>
                 <span className="hidden sm:block font-bold tracking-tight text-slate-900 dark:text-slate-100 text-lg">
                   HobbySphere
                 </span>
-              </div>
+              </Link>
             </div>
 
             {/* Center: Search (Desktop) */}
@@ -205,9 +205,10 @@ function Layout({ children }) {
                   )}
                 </div>
 
-                {/* ✅ DESKTOP: Show Home and Following icons */}
+                {/* ✅ HOME ICON IN NAVBAR */}
                 <NavLink to="/" active={location.pathname === '/'} icon={<HomeIcon size={20} />} label={t('nav.home')} />
-                <NavLink to="/following" active={location.pathname === '/following'} icon={<UserCheck size={20} />} label={t('nav.following')} />
+                
+                {/* ✅ COMMUNITIES IN NAVBAR */}
                 <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label={t('nav.communities')} />
               </div>
 
@@ -229,17 +230,17 @@ function Layout({ children }) {
                 <User size={20} />
               </Link>
 
-              {/* Theme Toggle */}
+              {/* ✅ DARK MODE - DESKTOP ONLY (removed from navbar on mobile) */}
               <button
                 onClick={toggleTheme}
-                className="nav-link"
+                className="nav-link hidden lg:block"
                 title={t('nav.changeTheme')}
               >
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              {/* Language Selector */}
-              <div className="relative hidden sm:block">
+              {/* Language Selector - DESKTOP */}
+              <div className="relative hidden lg:block">
                 <button
                   onClick={() => setShowLangMenu(!showLangMenu)}
                   className="nav-link"
@@ -327,82 +328,9 @@ function Layout({ children }) {
           />
           <div className="absolute left-0 top-[57px] sm:top-[65px] bottom-0 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl animate-slide-in-left overflow-y-auto">
             <div className="flex flex-col p-4 space-y-2">
-              {/* ===== NAVIGATION LINKS ===== */}
-              <Link
-                to="/"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                  location.pathname === '/'
-                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <HomeIcon size={20} />
-                {t('nav.home')}
-              </Link>
-
-              <Link
-                to="/following"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                  location.pathname === '/following'
-                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <UserCheck size={20} />
-                {t('nav.following')}
-              </Link>
-
-              <Link
-                to="/communities"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                  isActive('/communities')
-                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <Users size={20} />
-                {t('nav.communities')}
-              </Link>
-
-              <Link
-                to="/messages"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <MessageCircle size={20} />
-                {t('nav.messages')}
-                {unreadMessageCount > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                  </span>
-                )}
-              </Link>
-
-              <Link
-                to={`/profile/${user?.username}`}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <User size={20} />
-                {t('nav.profile')}
-              </Link>
-
-              <div className="divider" />
-
-              {/* ===== CREATE COMMUNITY BUTTON ===== */}
-              <button
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  window.location.href = '/communities/create';
-                }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <Users size={20} />
-                {t('nav.createCommunity')}
-              </button>
-
-              <div className="divider" />
-
+              
               {/* ===== MOBILE SIDEBAR COMPONENTS ===== */}
-              <div className="space-y-4 pt-2">
+              <div className="space-y-4 pb-2">
                 {/* Trending Hashtags */}
                 <div className="px-2">
                   <TrendingHashtags />
@@ -418,6 +346,20 @@ function Layout({ children }) {
                   <SuggestedCommunities />
                 </div>
               </div>
+
+              <div className="divider" />
+
+              {/* ===== DARK MODE TOGGLE ===== */}
+              <button
+                onClick={() => {
+                  toggleTheme();
+                  setShowMobileMenu(false);
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                {t('nav.changeTheme')}
+              </button>
 
               <div className="divider" />
 
@@ -480,14 +422,27 @@ function Layout({ children }) {
         {children}
       </main>
 
-      {/* ================= MOBILE FAB ================= */}
+      {/* ================= MOBILE FAB (with Create Community option) ================= */}
       {showFab && (
-        <button
-          onClick={() => setShowCreatePost(true)}
-          className="fixed bottom-6 right-6 lg:hidden bg-gradient-to-r from-indigo-600 to-purple-600 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center z-40 transition-all hover:scale-110 active:scale-95"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="lg:hidden fixed bottom-6 right-6 z-40 flex flex-col gap-3">
+          {/* Create Community Button */}
+          <button
+            onClick={() => window.location.href = '/communities/create'}
+            className="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+            title={t('nav.createCommunity')}
+          >
+            <Users size={20} />
+          </button>
+          
+          {/* Create Post Button */}
+          <button
+            onClick={() => setShowCreatePost(true)}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+            title={t('nav.createPost')}
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       )}
 
       <ScrollToTop />
