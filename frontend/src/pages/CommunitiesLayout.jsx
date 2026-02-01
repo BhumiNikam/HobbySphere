@@ -4,7 +4,7 @@ import API from '../services/api';
 import PostCard from '../components/PostCard';
 import PostForm from '../components/PostForm';
 import toast from 'react-hot-toast';
-import { Users } from 'lucide-react';
+import { Users, Menu, X } from 'lucide-react';
 
 export default function CommunitiesLayout() {
   const { user } = useContext(AuthContext);
@@ -12,6 +12,7 @@ export default function CommunitiesLayout() {
   const [myCommunities, setMyCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   useEffect(() => {
     fetchMyCommunities();
@@ -33,10 +34,25 @@ export default function CommunitiesLayout() {
     }
   };
 
+  const handleSelectCommunity = (community) => {
+    setSelectedCommunity(community);
+    setShowMobileSidebar(false);
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
-      {/* Main content column */}
+      {/* ================= MAIN CONTENT ================= */}
       <div className="w-full space-y-12 py-6 min-w-0">
+        {/* Mobile: Show toggle button when community is selected */}
+        {selectedCommunity && (
+          <button
+            onClick={() => setShowMobileSidebar(true)}
+            className="lg:hidden fixed bottom-20 right-6 z-30 bg-indigo-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+          >
+            <Menu size={20} />
+          </button>
+        )}
+
         {selectedCommunity ? (
           <CommunityFeed
             community={selectedCommunity}
@@ -48,53 +64,108 @@ export default function CommunitiesLayout() {
             <p className="text-slate-600 dark:text-slate-400">
               Select a community to view posts
             </p>
+            {/* Mobile: Show communities button if none selected */}
+            <button
+              onClick={() => setShowMobileSidebar(true)}
+              className="lg:hidden mt-4 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition"
+            >
+              View Communities
+            </button>
           </div>
         )}
       </div>
 
-      {/* Sidebar column */}
+      {/* ================= DESKTOP SIDEBAR ================= */}
       <aside className="hidden lg:block">
         <div className="sticky top-24">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
-            <h2 className="font-bold text-lg mb-4 text-slate-900 dark:text-slate-100">My Communities</h2>
-
-            <button
-              onClick={() => (window.location.href = '/communities/create')}
-              className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition mb-4 text-sm font-medium"
-            >
-              + Create Community
-            </button>
-
-            {loading ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-            ) : myCommunities.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                You haven't joined any communities yet.
-              </p>
-            ) : (
-              <div className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto">
-                {myCommunities.map((community) => (
-                  <button
-                    key={community._id}
-                    onClick={() => setSelectedCommunity(community)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                      selectedCommunity?._id === community._id
-                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    {community.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <CommunitySidebar
+            myCommunities={myCommunities}
+            loading={loading}
+            selectedCommunity={selectedCommunity}
+            onSelectCommunity={handleSelectCommunity}
+          />
         </div>
       </aside>
+
+      {/* ================= MOBILE SIDEBAR (MODAL) ================= */}
+      {showMobileSidebar && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowMobileSidebar(false)}
+          />
+          
+          {/* Sidebar */}
+          <div className="absolute right-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 shadow-xl animate-slide-in-right overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between z-10">
+              <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">My Communities</h2>
+              <button
+                onClick={() => setShowMobileSidebar(false)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+              >
+                <X size={20} className="text-slate-600 dark:text-slate-400" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+              <CommunitySidebar
+                myCommunities={myCommunities}
+                loading={loading}
+                selectedCommunity={selectedCommunity}
+                onSelectCommunity={handleSelectCommunity}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
+/* ================= COMMUNITY SIDEBAR (SHARED) ================= */
+function CommunitySidebar({ myCommunities, loading, selectedCommunity, onSelectCommunity }) {
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+      <h2 className="font-bold text-lg mb-4 text-slate-900 dark:text-slate-100">My Communities</h2>
+
+      <button
+        onClick={() => (window.location.href = '/communities/create')}
+        className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition mb-4 text-sm font-medium"
+      >
+        + Create Community
+      </button>
+
+      {loading ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+      ) : myCommunities.length === 0 ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          You haven't joined any communities yet.
+        </p>
+      ) : (
+        <div className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto">
+          {myCommunities.map((community) => (
+            <button
+              key={community._id}
+              onClick={() => onSelectCommunity(community)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
+                selectedCommunity?._id === community._id
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              {community.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================= COMMUNITY FEED ================= */
 function CommunityFeed({ community, user }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);

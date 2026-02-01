@@ -13,6 +13,9 @@ import {
   Menu,
   X,
   UserCheck,
+  TrendingUp,
+  UserPlus,
+  Hash,
 } from 'lucide-react';
 import {
   BrowserRouter,
@@ -49,6 +52,9 @@ import SearchBar from './components/SearchBar';
 import ScrollToTop from './components/ScrollToTop';
 import PostForm from './components/PostForm';
 import RightSidebar from './components/sidebar/RightSidebar';
+import TrendingHashtags from './components/sidebar/TrendingHashtags';
+import SuggestedUsers from './components/sidebar/SuggestedUsers';
+import SuggestedCommunities from './components/sidebar/SuggestedCommunities';
 
 /* =========================
    PROTECTED ROUTE
@@ -319,9 +325,9 @@ function Layout({ children }) {
             className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
             onClick={() => setShowMobileMenu(false)}
           />
-          <div className="absolute left-0 top-[57px] sm:top-[65px] bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl animate-slide-in-left">
+          <div className="absolute left-0 top-[57px] sm:top-[65px] bottom-0 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl animate-slide-in-left overflow-y-auto">
             <div className="flex flex-col p-4 space-y-2">
-              {/* ✅ MOBILE: Only show Home (not Following separately) */}
+              {/* ===== NAVIGATION LINKS ===== */}
               <Link
                 to="/"
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
@@ -369,17 +375,7 @@ function Layout({ children }) {
 
               <div className="divider" />
 
-              <button
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  setShowCreatePost(true);
-                }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <FileText size={20} />
-                {t('nav.createPost')}
-              </button>
-
+              {/* ===== CREATE COMMUNITY BUTTON ===== */}
               <button
                 onClick={() => {
                   setShowMobileMenu(false);
@@ -393,6 +389,27 @@ function Layout({ children }) {
 
               <div className="divider" />
 
+              {/* ===== MOBILE SIDEBAR COMPONENTS ===== */}
+              <div className="space-y-4 pt-2">
+                {/* Trending Hashtags */}
+                <div className="px-2">
+                  <TrendingHashtags />
+                </div>
+
+                {/* Suggested Users */}
+                <div className="px-2">
+                  <SuggestedUsers />
+                </div>
+
+                {/* Suggested Communities */}
+                <div className="px-2">
+                  <SuggestedCommunities />
+                </div>
+              </div>
+
+              <div className="divider" />
+
+              {/* ===== LANGUAGE SELECTOR ===== */}
               <div className="px-4 py-2">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">{t('nav.changeLanguage')}</p>
                 <div className="space-y-1">
