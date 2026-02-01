@@ -46,7 +46,7 @@ export default function ChatList({
      LIST
      ========================= */
   return (
-    <div className="overflow-y-auto h-[calc(100vh-73px)] divide-y divide-slate-100 dark:divide-slate-800">
+    <div className="divide-y divide-slate-100 dark:divide-slate-800">
       {conversations.map(conversation => {
         const otherUser = getOtherUser(conversation);
         const isActive = selectedConversation?._id === conversation._id;
