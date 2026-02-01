@@ -10,12 +10,13 @@ export default function Messages() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
+  const [followingUsers, setFollowingUsers] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [loading, setLoading] = useState(true);
   const { fetchUnreadMessageCount } = useSocket();
 
   useEffect(() => {
-    fetchConversations();
+    fetchData();
 
     const userId = searchParams.get('userId');
     if (userId) {
@@ -29,12 +30,32 @@ export default function Messages() {
     }
   }, [selectedConversation]);
 
-  const fetchConversations = async () => {
+  const fetchData = async () => {
     try {
-      const { data } = await api.get('/messages/conversations');
-      setConversations(data);
+      setLoading(true);
+      
+      // Fetch both conversations and following users
+      const [conversationsRes, followingRes] = await Promise.all([
+        api.get('/messages/conversations'),
+        api.get('/auth/me')
+      ]);
+
+      setConversations(conversationsRes.data);
+      
+      // Get following users and filter out those already in conversations
+      const following = followingRes.data.user.following || [];
+      const conversationUserIds = conversationsRes.data.map(conv => 
+        conv.participants.find(p => p._id !== followingRes.data.user._id)?._id
+      ).filter(Boolean);
+      
+      // Only show following users who don't have active conversations
+      const followingWithoutConversations = following.filter(
+        user => !conversationUserIds.includes(user._id)
+      );
+      
+      setFollowingUsers(followingWithoutConversations);
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -45,10 +66,14 @@ export default function Messages() {
       const { data } = await api.get(`/messages/conversations/${userId}`);
       setSelectedConversation(data);
 
-      setConversations(prev =>
-        prev.some(c => c._id === data._id)
-          ? prev
-          : [data, ...prev]
+      // Move to conversations list and remove from following list
+      setConversations(prev => {
+        const exists = prev.some(c => c._id === data._id);
+        return exists ? prev : [data, ...prev];
+      });
+      
+      setFollowingUsers(prev => 
+        prev.filter(user => user._id !== userId)
       );
     } catch (error) {
       console.error('Error opening conversation:', error);
@@ -57,6 +82,11 @@ export default function Messages() {
 
   const handleSelectConversation = (conversation) => {
     setSelectedConversation(conversation);
+  };
+
+  const handleSelectFollowingUser = async (user) => {
+    // Open conversation with this user
+    await openConversationWithUser(user._id);
   };
 
   const markConversationAsRead = async (conversationId) => {
@@ -71,23 +101,26 @@ export default function Messages() {
   const handleNewMessage = (conversationId, message) => {
     const messageText = message.text || message.content || '';
 
-    setConversations(prev =>
-      prev
-        .map(conv =>
-          conv._id === conversationId
-            ? {
-                ...conv,
-                lastMessage: {
-                  text: messageText,
-                  sender: message.sender,
-                  createdAt: message.createdAt,
-                },
-                updatedAt: new Date(),
-              }
-            : conv
-        )
-        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-    );
+    setConversations(prev => {
+      const updatedConversations = prev.map(conv =>
+        conv._id === conversationId
+          ? {
+              ...conv,
+              lastMessage: {
+                text: messageText,
+                sender: message.sender,
+                createdAt: message.createdAt,
+              },
+              updatedAt: new Date(),
+            }
+          : conv
+      );
+      
+      // Sort by most recent message
+      return updatedConversations.sort((a, b) => 
+        new Date(b.updatedAt) - new Date(a.updatedAt)
+      );
+    });
   };
 
   if (loading) {
@@ -97,6 +130,8 @@ export default function Messages() {
       </div>
     );
   }
+
+  const totalItems = conversations.length + followingUsers.length;
 
   return (
     <div className="h-screen w-screen flex bg-slate-50 dark:bg-slate-950 overflow-hidden relative">
@@ -140,13 +175,19 @@ export default function Messages() {
             </button>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+            {conversations.length > 0 && (
+              <span>{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</span>
+            )}
+            {conversations.length > 0 && followingUsers.length > 0 && <span> • </span>}
+            {followingUsers.length > 0 && (
+              <span>{followingUsers.length} following</span>
+            )}
           </p>
         </div>
 
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          {conversations.length === 0 ? (
+          {totalItems === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                 <MessageCircle size={32} className="sm:w-10 sm:h-10 text-slate-300 dark:text-slate-600" />
@@ -155,15 +196,67 @@ export default function Messages() {
                 No messages yet
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                Start a conversation from a user's profile
+                Follow people to start conversations
               </p>
             </div>
           ) : (
-            <ChatList
-              conversations={conversations}
-              selectedConversation={selectedConversation}
-              onSelectConversation={handleSelectConversation}
-            />
+            <>
+              {/* Active Conversations */}
+              {conversations.length > 0 && (
+                <ChatList
+                  conversations={conversations}
+                  selectedConversation={selectedConversation}
+                  onSelectConversation={handleSelectConversation}
+                />
+              )}
+
+              {/* Following Users (without conversations) */}
+              {followingUsers.length > 0 && (
+                <div>
+                  {conversations.length > 0 && (
+                    <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-y border-slate-200 dark:border-slate-800">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        Following
+                      </p>
+                    </div>
+                  )}
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {followingUsers.map((user) => (
+                      <button
+                        key={user._id}
+                        onClick={() => handleSelectFollowingUser(user)}
+                        className="w-full px-4 py-4 flex items-start gap-3 text-left transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800 bg-white dark:bg-slate-900"
+                      >
+                        {/* Avatar */}
+                        <img
+                          src={
+                            user.profileImage ||
+                            `https://ui-avatars.com/api/?name=${user.fullName}&background=6366f1&color=fff`
+                          }
+                          alt={user.fullName}
+                          className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                        />
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-semibold text-slate-900 dark:text-slate-100">
+                            {user.fullName}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            @{user.username}
+                          </p>
+                          {user.bio && (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                              {user.bio}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </aside>
@@ -191,7 +284,7 @@ export default function Messages() {
                 Your messages
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-sm mx-auto">
-                Select a conversation or start chatting from a user's profile
+                Select a conversation to start chatting
               </p>
             </div>
           </div>

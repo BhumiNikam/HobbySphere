@@ -34,9 +34,9 @@ export default function ChatList({
   if (conversations.length === 0) {
     return (
       <div className="p-10 text-center">
-        <p className="text-slate-600 font-medium">No conversations yet</p>
-        <p className="text-sm text-slate-400 mt-2">
-          Start a conversation from a user’s profile
+        <p className="text-slate-600 dark:text-slate-300 font-medium">No conversations yet</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500 mt-2">
+          Start a conversation from a user's profile
         </p>
       </div>
     );
@@ -46,7 +46,7 @@ export default function ChatList({
      LIST
      ========================= */
   return (
-    <div className="overflow-y-auto h-[calc(100vh-73px)] divide-y divide-slate-100">
+    <div className="overflow-y-auto h-[calc(100vh-73px)] divide-y divide-slate-100 dark:divide-slate-800">
       {conversations.map(conversation => {
         const otherUser = getOtherUser(conversation);
         const isActive = selectedConversation?._id === conversation._id;
@@ -58,8 +58,11 @@ export default function ChatList({
             className={`
               w-full px-4 py-4 flex items-start gap-3 text-left
               transition-colors duration-150
-              hover:bg-slate-50
-              ${isActive ? 'bg-indigo-50' : 'bg-white'}
+              hover:bg-slate-50 dark:hover:bg-slate-800
+              ${isActive 
+                ? 'bg-indigo-50 dark:bg-indigo-950/30' 
+                : 'bg-white dark:bg-slate-900'
+              }
             `}
           >
             {/* Avatar */}
@@ -78,21 +81,23 @@ export default function ChatList({
               <div className="flex items-center justify-between gap-2">
                 <p
                   className={`truncate font-semibold ${
-                    isActive ? 'text-indigo-700' : 'text-slate-900'
+                    isActive 
+                      ? 'text-indigo-700 dark:text-indigo-400' 
+                      : 'text-slate-900 dark:text-slate-100'
                   }`}
                 >
                   {otherUser.fullName}
                 </p>
 
                 {conversation.lastMessage && (
-                  <span className="text-xs text-slate-400 flex-shrink-0">
+                  <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">
                     {formatTime(conversation.lastMessage.createdAt)}
                   </span>
                 )}
               </div>
 
               {/* Username */}
-              <p className="text-xs text-slate-500 truncate">
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 @{otherUser.username}
               </p>
 
@@ -103,8 +108,8 @@ export default function ChatList({
                     text-sm truncate mt-1
                     ${
                       isActive
-                        ? 'text-slate-700'
-                        : 'text-slate-500'
+                        ? 'text-slate-700 dark:text-slate-300'
+                        : 'text-slate-500 dark:text-slate-400'
                     }
                   `}
                 >
