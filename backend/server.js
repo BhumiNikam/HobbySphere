@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const http = require('http');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 // Remove apiLimiter from here - it will be applied per-route instead
 // const { apiLimiter } = require('./middleware/rateLimiter');
@@ -22,6 +23,23 @@ const io = new Server(server, {
 
 // Connect DB first
 connectDB();
+
+// Auto-create indexes after MongoDB connection
+mongoose.connection.once('open', async () => {
+  console.log('✅ MongoDB Connected');
+  
+  // ✅ AUTO-CREATE INDEXES
+  try {
+    await Promise.all([
+      mongoose.model('Community').createIndexes(),
+      mongoose.model('Post').createIndexes(),
+      mongoose.model('User').createIndexes()
+    ]);
+    console.log('✅ Database indexes created successfully');
+  } catch (error) {
+    console.error('❌ Index creation error:', error);
+  }
+});
 
 // Middleware - ORDER MATTERS!
 app.use(cors({

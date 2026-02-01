@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import API from '../services/api';
 import toast from 'react-hot-toast';
+import { Check } from 'lucide-react';
 
 // ✅ Cache for communities list
 const communitiesCache = {
@@ -12,23 +14,20 @@ const communitiesCache = {
 
 export default function Communities() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [communities, setCommunities] = useState([]);
+  const [joinedCommunities, setJoinedCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
-  const searchTimeout = useRef(null);
+  const [joiningId, setJoiningId] = useState(null);
 
   useEffect(() => {
-    // ✅ Debounce search
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    
-    searchTimeout.current = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       fetchCommunities();
     }, 300);
 
-    return () => {
-      if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    };
+    return () => clearTimeout(timeoutId);
   }, [search, category]);
 
   const fetchCommunities = async () => {
@@ -44,9 +43,9 @@ export default function Communities() {
       if (
         communitiesCache.data &&
         JSON.stringify(communitiesCache.params) === cacheKey &&
-        now - communitiesCache.timestamp < 120000 // Cache for 2 minutes
+        now - communitiesCache.timestamp < 120000
       ) {
-        setCommunities(communitiesCache.data);
+        separateCommunities(communitiesCache.data);
         setLoading(false);
         return;
       }
@@ -60,12 +59,64 @@ export default function Communities() {
       communitiesCache.timestamp = now;
       communitiesCache.params = params;
       
-      setCommunities(data);
+      separateCommunities(data);
     } catch (error) {
       toast.error('Failed to load communities');
       setCommunities([]);
+      setJoinedCommunities([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Separate joined and not-joined communities
+  const separateCommunities = (allCommunities) => {
+    const userCommunities = user?.communities || [];
+    const userCommunityIds = userCommunities.map(c => typeof c === 'string' ? c : c._id);
+    
+    const joined = [];
+    const notJoined = [];
+    
+    allCommunities.forEach(community => {
+      if (userCommunityIds.includes(community._id)) {
+        joined.push(community);
+      } else {
+        notJoined.push(community);
+      }
+    });
+    
+    setJoinedCommunities(joined);
+    setCommunities(notJoined);
+  };
+
+  const handleJoinToggle = async (communityId, isJoined) => {
+    try {
+      setJoiningId(communityId);
+      
+      if (isJoined) {
+        await API.post(`/communities/${communityId}/leave`);
+        toast.success('Left community');
+        
+        // Move from joined to not-joined
+        const community = joinedCommunities.find(c => c._id === communityId);
+        setJoinedCommunities(joinedCommunities.filter(c => c._id !== communityId));
+        if (community) setCommunities([community, ...communities]);
+      } else {
+        await API.post(`/communities/${communityId}/join`);
+        toast.success('Joined community!');
+        
+        // Move from not-joined to joined
+        const community = communities.find(c => c._id === communityId);
+        setCommunities(communities.filter(c => c._id !== communityId));
+        if (community) setJoinedCommunities([...joinedCommunities, community]);
+      }
+      
+      // Clear cache
+      communitiesCache.data = null;
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update membership');
+    } finally {
+      setJoiningId(null);
     }
   };
 
@@ -82,10 +133,79 @@ export default function Communities() {
     'Other',
   ];
 
-  // ✅ Navigate to community without re-fetching
-  const handleCommunityClick = (communityId) => {
-    navigate(`/communities/${communityId}`);
-  };
+  const CommunityCard = ({ community, isJoined }) => (
+    <div className="card-modern-hover group overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all">
+      {/* COVER */}
+      <div
+        className="h-36 relative bg-gradient-to-br from-indigo-500 to-purple-600 cursor-pointer"
+        style={{
+          backgroundImage: community.coverImage?.url ? `url(${community.coverImage.url})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+        onClick={() => navigate(`/communities/${community._id}`)}
+      >
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+        
+        {/* ✅ Joined Badge */}
+        {isJoined && (
+          <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+            <Check size={14} />
+            Joined
+          </div>
+        )}
+      </div>
+
+      {/* BODY */}
+      <div className="p-5">
+        <h3 
+          className="text-lg font-bold mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition cursor-pointer text-slate-900 dark:text-slate-100 line-clamp-1"
+          onClick={() => navigate(`/communities/${community._id}`)}
+        >
+          {community.name}
+        </h3>
+
+        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-4 min-h-[40px]">
+          {community.description}
+        </p>
+
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            {community.memberCount} members
+          </span>
+          <span className="badge bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-medium">
+            {community.category}
+          </span>
+        </div>
+
+        <div className="flex gap-2">
+          {/* ✅ Join/Leave Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleJoinToggle(community._id, isJoined);
+            }}
+            disabled={joiningId === community._id}
+            className={`flex-1 py-2 rounded-lg font-medium transition text-sm ${
+              isJoined
+                ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            } disabled:opacity-50`}
+          >
+            {joiningId === community._id ? 'Loading...' : isJoined ? 'Leave' : 'Join'}
+          </button>
+
+          {/* View Button */}
+          <button
+            onClick={() => navigate(`/communities/${community._id}`)}
+            className="px-4 py-2 rounded-lg font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition text-sm"
+          >
+            View
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -137,7 +257,7 @@ export default function Communities() {
             <div key={i} className="skeleton h-64 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
           ))}
         </div>
-      ) : communities.length === 0 ? (
+      ) : joinedCommunities.length === 0 && communities.length === 0 ? (
         <div className="empty-state card-modern py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
           <div className="empty-state-icon animate-bounce-slow text-6xl mb-4">
             🔍
@@ -150,58 +270,35 @@ export default function Communities() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {communities.map((community) => (
-            <div
-              key={community._id}
-              className="card-modern-hover group overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all"
-            >
-              {/* COVER */}
-              <div
-                className="h-36 relative bg-gradient-to-br from-indigo-500 to-purple-600 cursor-pointer"
-                style={{
-                  backgroundImage: community.coverImage?.url
-                    ? `url(${community.coverImage.url})`
-                    : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-                onClick={() => handleCommunityClick(community._id)}
-              >
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-
-              {/* BODY */}
-              <div className="p-5">
-                <h3 
-                  className="text-lg font-bold mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition cursor-pointer text-slate-900 dark:text-slate-100"
-                  onClick={() => handleCommunityClick(community._id)}
-                >
-                  {community.name}
-                </h3>
-
-                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-4">
-                  {community.description}
-                </p>
-
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    {community.memberCount} members
-                  </span>
-                  <span className="badge bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-medium">
-                    {community.category}
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => handleCommunityClick(community._id)}
-                  className="btn-primary w-full text-center ripple bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium transition"
-                >
-                  View Community
-                </button>
+        <div className="space-y-10">
+          {/* ✅ JOINED COMMUNITIES */}
+          {joinedCommunities.length > 0 && (
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
+                <Check size={24} className="text-green-500" />
+                Your Communities ({joinedCommunities.length})
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {joinedCommunities.map((community) => (
+                  <CommunityCard key={community._id} community={community} isJoined={true} />
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* ✅ OTHER COMMUNITIES */}
+          {communities.length > 0 && (
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+                Discover More Communities
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {communities.map((community) => (
+                  <CommunityCard key={community._id} community={community} isJoined={false} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

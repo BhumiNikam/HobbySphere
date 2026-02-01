@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -6,6 +6,10 @@ import API from '../services/api';
 import PostCard from '../components/PostCard';
 import toast from 'react-hot-toast';
 import { Users, Menu, X, Plus } from 'lucide-react';
+
+// ✅ Cache for communities and posts
+const communityCache = new Map();
+const postsCache = new Map();
 
 export default function CommunitiesLayout() {
   const { user } = useContext(AuthContext);
@@ -22,15 +26,28 @@ export default function CommunitiesLayout() {
 
   const fetchMyCommunities = async () => {
     try {
-      const res = await API.get('/communities');
-      const joined = res.data.communities.filter((c) =>
-        c.members.some(
-          (m) => m.toString() === user._id || m._id === user._id
-        )
-      );
+      // ✅ Check cache
+      const cached = communityCache.get(user._id);
+      if (cached && Date.now() - cached.timestamp < 120000) {
+        setMyCommunities(cached.data);
+        if (cached.data.length > 0 && !selectedCommunity) {
+          setSelectedCommunity(cached.data[0]);
+        }
+        setLoading(false);
+        return;
+      }
+
+      const res = await API.get('/communities/my-communities');
+      const joined = res.data || [];
+      
+      // ✅ Cache the result
+      communityCache.set(user._id, {
+        data: joined,
+        timestamp: Date.now()
+      });
+      
       setMyCommunities(joined);
       
-      // ✅ AUTO-SELECT FIRST COMMUNITY
       if (joined.length > 0 && !selectedCommunity) {
         setSelectedCommunity(joined[0]);
       }
@@ -50,9 +67,9 @@ export default function CommunitiesLayout() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-        {/* ================= MAIN CONTENT ================= */}
+        {/* MAIN CONTENT */}
         <div className="w-full space-y-6 min-w-0">
-          {/* ✅ MOBILE: Community Selector at Top */}
+          {/* MOBILE: Community Selector at Top */}
           <div className="lg:hidden bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
@@ -102,7 +119,6 @@ export default function CommunitiesLayout() {
               t={t}
             />
           ) : (
-            // ✅ IMPROVED EMPTY STATE
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 sm:p-16 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
               <Users className="w-20 h-20 mx-auto mb-6 text-slate-300 dark:text-slate-600" />
               
@@ -141,7 +157,7 @@ export default function CommunitiesLayout() {
           )}
         </div>
 
-        {/* ================= DESKTOP SIDEBAR ================= */}
+        {/* DESKTOP SIDEBAR */}
         <aside className="hidden lg:block">
           <div className="sticky top-24">
             <CommunitySidebar
@@ -154,18 +170,15 @@ export default function CommunitiesLayout() {
           </div>
         </aside>
 
-        {/* ================= MOBILE SIDEBAR (MODAL) ================= */}
+        {/* MOBILE SIDEBAR (MODAL) */}
         {showMobileSidebar && (
           <div className="lg:hidden fixed inset-0 z-50">
-            {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
               onClick={() => setShowMobileSidebar(false)}
             />
             
-            {/* Sidebar */}
             <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-slate-900 shadow-xl animate-slide-in-right overflow-y-auto">
-              {/* Header */}
               <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between z-10">
                 <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">
                   {t('community.myCommunities') || 'My Communities'}
@@ -178,7 +191,6 @@ export default function CommunitiesLayout() {
                 </button>
               </div>
 
-              {/* Content */}
               <div className="p-4">
                 <CommunitySidebar
                   myCommunities={myCommunities}
@@ -196,7 +208,7 @@ export default function CommunitiesLayout() {
   );
 }
 
-/* ================= COMMUNITY SIDEBAR (SHARED) ================= */
+/* COMMUNITY SIDEBAR */
 function CommunitySidebar({ myCommunities, loading, selectedCommunity, onSelectCommunity, t }) {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
@@ -256,7 +268,7 @@ function CommunitySidebar({ myCommunities, loading, selectedCommunity, onSelectC
   );
 }
 
-/* ================= COMMUNITY FEED ================= */
+/* COMMUNITY FEED */
 function CommunityFeed({ community, user, t }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -268,9 +280,25 @@ function CommunityFeed({ community, user, t }) {
 
   const fetchPosts = async () => {
     try {
+      // ✅ Check cache
+      const cached = postsCache.get(community._id);
+      if (cached && Date.now() - cached.timestamp < 60000) {
+        setPosts(cached.data);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       const res = await API.get(`/communities/${community._id}/posts`);
-      setPosts(res.data.posts || res.data);
+      const data = res.data.posts || res.data;
+      
+      // ✅ Cache posts
+      postsCache.set(community._id, {
+        data: data,
+        timestamp: Date.now()
+      });
+      
+      setPosts(data);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
       toast.error(t('post.failedToLoad') || 'Failed to load posts');
@@ -281,11 +309,16 @@ function CommunityFeed({ community, user, t }) {
 
   const handlePostDeleted = (postId) => {
     setPosts((prev) => prev.filter((p) => p._id !== postId));
+    // Clear cache
+    postsCache.delete(community._id);
   };
 
-  const isMember = community.members.some(
-    (m) => m.toString() === user._id || m._id === user._id
-  );
+  // ✅ Memoized membership check
+  const isMember = useMemo(() => {
+    return community.members?.some(
+      (m) => m.toString() === user._id || m._id === user._id
+    ) || false;
+  }, [community.members, user._id]);
 
   return (
     <div className="w-full space-y-6">
@@ -327,11 +360,10 @@ function CommunityFeed({ community, user, t }) {
         )}
       </div>
 
-      {/* ✅ REMOVED: PostForm - Users create posts via navbar/FAB modal */}
-
       {/* POSTS */}
       {loading ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-slate-600 dark:text-slate-400">
             {t('common.loading') || 'Loading posts...'}
           </p>

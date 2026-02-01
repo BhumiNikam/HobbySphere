@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 
 const postSchema = new mongoose.Schema({
   content: { type: String, required: true, maxlength: 2000 },
-  author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', required: false }, // ✅ Optional - allows profile posts
+  author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', index: true },
   images: [{
     url: String,
     publicId: String,
@@ -12,13 +12,15 @@ const postSchema = new mongoose.Schema({
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   commentCount: { type: Number, default: 0 },
   hashtags: [String],
+  isPinned: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 
-
-// Add indexes for better performance
+// ✅ CRITICAL INDEXES FOR PERFORMANCE
 postSchema.index({ author: 1, createdAt: -1 });
-postSchema.index({ hashtags: 1 });
+postSchema.index({ community: 1, isPinned: -1, createdAt: -1 }); // ✅ Fast community posts
+postSchema.index({ hashtags: 1, createdAt: -1 });
 postSchema.index({ createdAt: -1 });
+postSchema.index({ likes: 1 }); // ✅ Fast like lookups
 
 module.exports = mongoose.model('Post', postSchema);

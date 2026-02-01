@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }],
   
-  // 🆕 COMMUNITY FIELDS - ADD THESE TO YOUR EXISTING User.js
+  // Community fields
   communities: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Community'
@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema({
     default: false
   },
   
-  // Notifications (updated to include community notifications)
+  // Notifications
   notifications: [{
     type: { 
       type: String, 
@@ -59,10 +59,12 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-// Indexes
+// ✅ CRITICAL INDEXES FOR PERFORMANCE
 userSchema.index({ username: 1 }, { unique: true });
 userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ communities: 1 });
+userSchema.index({ communities: 1 }); // ✅ Fast community member lookup
 userSchema.index({ interests: 1 });
+userSchema.index({ followers: 1 });
+userSchema.index({ following: 1 });
 
 module.exports = mongoose.model('User', userSchema);
