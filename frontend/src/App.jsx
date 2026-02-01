@@ -183,7 +183,7 @@ function Layout({ children }) {
                   )}
                 </div>
 
-                <NavLink to="/" active={isActive('/')} icon={<Home size={20} />} label="Home" />
+                <NavLink to="/" active={location.pathname === '/'} icon={<Home size={20} />} label="Home" />
                 <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label="Communities" />
               </div>
 
