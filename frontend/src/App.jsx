@@ -1,5 +1,5 @@
 import {
-  Home,
+  Home as HomeIcon,
   Film,
   Users,
   MessageCircle,
@@ -12,7 +12,7 @@ import {
   Languages,
   Menu,
   X,
-  UserCheck, // ADDED
+  UserCheck,
 } from 'lucide-react';
 import {
   BrowserRouter,
@@ -184,7 +184,7 @@ function Layout({ children }) {
                   )}
                 </div>
 
-                <NavLink to="/" active={location.pathname === '/'} icon={<Home size={20} />} label="Home" />
+                <NavLink to="/" active={location.pathname === '/'} icon={<HomeIcon size={20} />} label="Home" />
                 <NavLink to="/following" active={location.pathname === '/following'} icon={<UserCheck size={20} />} label="Following" />
                 <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label="Communities" />
               </div>
@@ -282,7 +282,7 @@ function Layout({ children }) {
                     : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
-                <Home size={20} />
+                <HomeIcon size={20} />
                 Home
               </Link>
 
