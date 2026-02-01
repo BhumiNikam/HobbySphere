@@ -74,7 +74,7 @@ function Layout({ children }) {
   const { user, logout } = useContext(AuthContext);
   const { unreadMessageCount } = useSocket();
   const { theme, toggleTheme } = useTheme();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const location = useLocation();
 
   const [showCreatePost, setShowCreatePost] = useState(false);
@@ -82,12 +82,27 @@ function Layout({ children }) {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showFab, setShowFab] = useState(true);
+  const [showGuestWarning, setShowGuestWarning] = useState(false);
 
   const isActive = (path) => location.pathname.startsWith(path);
+  const isGuest = user?.username?.startsWith('guest_');
 
   const changeLanguage = (lang) => {
     i18n.changeLanguage(lang);
     setShowLangMenu(false);
+  };
+
+  const handleLogout = () => {
+    if (isGuest) {
+      setShowGuestWarning(true);
+    } else {
+      logout();
+    }
+  };
+
+  const confirmGuestLogout = () => {
+    setShowGuestWarning(false);
+    logout();
   };
 
   /* FAB show / hide on scroll */
@@ -151,7 +166,7 @@ function Layout({ children }) {
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
                   >
                     <Plus size={16} />
-                    <span className="hidden xl:inline">Create</span>
+                    <span className="hidden xl:inline">{t('nav.create')}</span>
                   </button>
 
                   {showCreateMenu && (
@@ -168,7 +183,7 @@ function Layout({ children }) {
                           }}
                           className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 transition-colors"
                         >
-                          <FileText size={16} /> Create Post
+                          <FileText size={16} /> {t('nav.createPost')}
                         </button>
                         <button
                           onClick={() => {
@@ -177,7 +192,7 @@ function Layout({ children }) {
                           }}
                           className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 transition-colors"
                         >
-                          <Users size={16} /> Create Community
+                          <Users size={16} /> {t('nav.createCommunity')}
                         </button>
                       </div>
                     </>
@@ -185,16 +200,16 @@ function Layout({ children }) {
                 </div>
 
                 {/* ✅ DESKTOP: Show Home and Following icons */}
-                <NavLink to="/" active={location.pathname === '/'} icon={<HomeIcon size={20} />} label="Home" />
-                <NavLink to="/following" active={location.pathname === '/following'} icon={<UserCheck size={20} />} label="Following" />
-                <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label="Communities" />
+                <NavLink to="/" active={location.pathname === '/'} icon={<HomeIcon size={20} />} label={t('nav.home')} />
+                <NavLink to="/following" active={location.pathname === '/following'} icon={<UserCheck size={20} />} label={t('nav.following')} />
+                <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label={t('nav.communities')} />
               </div>
 
               {/* Notifications */}
               <NotificationBell />
 
               {/* Messages */}
-              <Link to="/messages" className="nav-link relative">
+              <Link to="/messages" className="nav-link relative" title={t('nav.messages')}>
                 <MessageCircle size={20} />
                 {unreadMessageCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-semibold">
@@ -204,7 +219,7 @@ function Layout({ children }) {
               </Link>
 
               {/* Profile */}
-              <Link to={`/profile/${user?.username}`} className="nav-link">
+              <Link to={`/profile/${user?.username}`} className="nav-link" title={t('nav.profile')}>
                 <User size={20} />
               </Link>
 
@@ -212,7 +227,7 @@ function Layout({ children }) {
               <button
                 onClick={toggleTheme}
                 className="nav-link"
-                title="Toggle theme"
+                title={t('nav.changeTheme')}
               >
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
@@ -222,7 +237,7 @@ function Layout({ children }) {
                 <button
                   onClick={() => setShowLangMenu(!showLangMenu)}
                   className="nav-link"
-                  title="Change language"
+                  title={t('nav.changeLanguage')}
                 >
                   <Languages size={20} />
                 </button>
@@ -250,9 +265,9 @@ function Layout({ children }) {
 
               {/* Logout */}
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="nav-link text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                title="Logout"
+                title={t('nav.logout')}
               >
                 <LogOut size={20} />
               </button>
@@ -265,6 +280,37 @@ function Layout({ children }) {
           </div>
         </div>
       </nav>
+
+      {/* ================= GUEST LOGOUT WARNING MODAL ================= */}
+      {showGuestWarning && (
+        <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 p-6">
+            <div className="text-center space-y-4">
+              <div className="text-5xl">⚠️</div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                {t('auth.guestWarning')}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400">
+                {t('auth.guestWarningDetail')}
+              </p>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowGuestWarning(false)}
+                  className="flex-1 px-4 py-3 rounded-xl font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  {t('auth.stayLoggedIn')}
+                </button>
+                <button
+                  onClick={confirmGuestLogout}
+                  className="flex-1 px-4 py-3 rounded-xl font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  {t('auth.yesLogout')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= MOBILE MENU ================= */}
       {showMobileMenu && (
@@ -285,7 +331,7 @@ function Layout({ children }) {
                 }`}
               >
                 <HomeIcon size={20} />
-                Home
+                {t('nav.home')}
               </Link>
 
               <Link
@@ -297,7 +343,7 @@ function Layout({ children }) {
                 }`}
               >
                 <Users size={20} />
-                Communities
+                {t('nav.communities')}
               </Link>
 
               <Link
@@ -305,7 +351,7 @@ function Layout({ children }) {
                 className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <MessageCircle size={20} />
-                Messages
+                {t('nav.messages')}
                 {unreadMessageCount > 0 && (
                   <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
                     {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
@@ -318,7 +364,7 @@ function Layout({ children }) {
                 className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <User size={20} />
-                Profile
+                {t('nav.profile')}
               </Link>
 
               <div className="divider" />
@@ -331,7 +377,7 @@ function Layout({ children }) {
                 className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <FileText size={20} />
-                Create Post
+                {t('nav.createPost')}
               </button>
 
               <button
@@ -342,13 +388,13 @@ function Layout({ children }) {
                 className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <Users size={20} />
-                Create Community
+                {t('nav.createCommunity')}
               </button>
 
               <div className="divider" />
 
               <div className="px-4 py-2">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Language</p>
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">{t('nav.changeLanguage')}</p>
                 <div className="space-y-1">
                   <button
                     onClick={() => { changeLanguage('en'); setShowMobileMenu(false); }}
@@ -380,7 +426,7 @@ function Layout({ children }) {
         <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
-              <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Create Post</h2>
+              <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">{t('nav.createPost')}</h2>
               <button
                 onClick={() => setShowCreatePost(false)}
                 className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
@@ -392,7 +438,7 @@ function Layout({ children }) {
               <PostForm
                 onPostCreated={() => {
                   setShowCreatePost(false);
-                  toast.success('Post created!');
+                  toast.success(t('post.postCreated'));
                 }}
               />
             </div>

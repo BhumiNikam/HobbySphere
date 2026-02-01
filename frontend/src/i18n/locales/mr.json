@@ -9,7 +9,10 @@
     "logout": "लॉगआउट",
     "create": "तयार करा",
     "createPost": "पोस्ट तयार करा",
-    "createCommunity": "समुदाय तयार करा"
+    "createCommunity": "समुदाय तयार करा",
+    "notifications": "सूचना",
+    "changeTheme": "थीम बदला",
+    "changeLanguage": "भाषा बदला"
   },
   "post": {
     "like": "आवडले",
@@ -66,7 +69,11 @@
     "alreadyHaveAccount": "आधीपासून खाते आहे?",
     "resetPassword": "पासवर्ड रीसेट करा",
     "newPassword": "नवीन पासवर्ड",
-    "confirmPassword": "पासवर्डची पुष्टी करा"
+    "confirmPassword": "पासवर्डची पुष्टी करा",
+    "guestWarning": "⚠️ गेस्ट मोड: लॉगआउट केल्यावर तुमचा डेटा डिलीट होईल।",
+    "guestWarningDetail": "तुम्हाला खरंच लॉगआउट करायचं आहे का? तुमचा सर्व डेटा कायमचा हटवला जाईल।",
+    "yesLogout": "हो, लॉगआउट करा",
+    "stayLoggedIn": "लॉग इन राहा"
   },
   "search": {
     "searchPlaceholder": "शोधा...",
@@ -95,5 +102,9 @@
     "trending": "ट्रेंडिंग हॅशटॅग",
     "suggested": "सुचवलेले वापरकर्ते",
     "suggestedCommunities": "सुचवलेले समुदाय"
+  },
+  "feed": {
+    "forYou": "तुमच्यासाठी",
+    "following": "फॉलोइंग"
   }
 }

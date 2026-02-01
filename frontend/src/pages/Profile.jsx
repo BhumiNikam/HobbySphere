@@ -19,7 +19,7 @@ import API from '../services/api';
 export default function Profile() {
   const { t } = useTranslation();
   const { username } = useParams();
-  const { user: currentUser } = useContext(AuthContext);
+  const { user: currentUser, refreshUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -34,7 +34,7 @@ export default function Profile() {
 
   useEffect(() => {
     loadProfile();
-  }, [username]);
+  }, [username, currentUser]);
 
   const loadProfile = async () => {
     try {
@@ -49,13 +49,19 @@ export default function Profile() {
       setPosts(postsRes.data || []);
       setFollowerCount(data.followers?.length || 0);
 
-      setIsFollowing(
-        currentUser?._id
-          ? data.followers?.some(
-              (f) => f._id.toString() === currentUser._id.toString()
-            )
-          : false
-      );
+      // Fixed comparison - check if currentUser._id exists in followers array
+      if (currentUser?._id && data.followers) {
+        const isUserFollowing = data.followers.some(
+          (follower) => {
+            // Handle both populated and non-populated followers
+            const followerId = typeof follower === 'object' ? follower._id : follower;
+            return followerId.toString() === currentUser._id.toString();
+          }
+        );
+        setIsFollowing(isUserFollowing);
+      } else {
+        setIsFollowing(false);
+      }
     } catch {
       setProfile(null);
     } finally {
@@ -68,6 +74,12 @@ export default function Profile() {
       const res = await API.post(`/users/${profile._id}/follow`);
       setIsFollowing(res.data.isFollowing);
       setFollowerCount((c) => (res.data.isFollowing ? c + 1 : c - 1));
+      
+      // Refresh current user data to update following list
+      if (refreshUser) {
+        await refreshUser();
+      }
+      
       toast.success(res.data.isFollowing ? t('profile.follow') : t('profile.unfollow'));
     } catch {
       toast.error(t('common.error'));

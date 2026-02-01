@@ -79,11 +79,13 @@ exports.register = async (req, res) => {
     res.status(201).json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         fullName: user.fullName,
-        profileImage: user.profileImage
+        profileImage: user.profileImage,
+        followers: [],
+        following: []
       }
     });
   } catch (error) {
@@ -97,8 +99,11 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user
-    const user = await User.findOne({ email });
+    // Find user and populate followers/following
+    const user = await User.findOne({ email })
+      .populate('followers', '_id username fullName profileImage')
+      .populate('following', '_id username fullName profileImage');
+    
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -115,11 +120,14 @@ exports.login = async (req, res) => {
     res.json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         fullName: user.fullName,
-        profileImage: user.profileImage
+        profileImage: user.profileImage,
+        bio: user.bio,
+        followers: user.followers,
+        following: user.following
       }
     });
   } catch (error) {
@@ -152,12 +160,14 @@ exports.guestLogin = async (req, res) => {
     res.json({
       token,
       user: {
-        id: guestUser._id,
+        _id: guestUser._id,
         username: guestUser.username,
         email: guestUser.email,
         fullName: guestUser.fullName,
         profileImage: guestUser.profileImage,
-        isGuest: true
+        isGuest: true,
+        followers: [],
+        following: []
       }
     });
   } catch (error) {
@@ -166,20 +176,40 @@ exports.guestLogin = async (req, res) => {
   }
 };
 
-// Get current user
+// Get current user - FIXED to populate followers/following
 exports.getMe = async (req, res) => {
-  res.json({ 
-    user: {
-      id: req.user._id,
-      username: req.user.username,
-      email: req.user.email,
-      fullName: req.user.fullName,
-      profileImage: req.user.profileImage,
-      bio: req.user.bio,
-      followers: req.user.followers,
-      following: req.user.following
+  try {
+    // Fetch fresh user data with populated followers/following
+    const user = await User.findById(req.user._id)
+      .select('-password')
+      .populate('followers', '_id username fullName profileImage')
+      .populate('following', '_id username fullName profileImage');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
-  });
+
+    res.json({ 
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName,
+        profileImage: user.profileImage,
+        coverImage: user.coverImage,
+        bio: user.bio,
+        location: user.location,
+        website: user.website,
+        followers: user.followers,
+        following: user.following,
+        isGuest: user.isGuest,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 // Forgot password - send reset email

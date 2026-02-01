@@ -9,6 +9,20 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Function to refresh user data from server
+  const refreshUser = async () => {
+    try {
+      const res = await API.get('/auth/me');
+      const updatedUser = res.data.user;
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return updatedUser;
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
@@ -16,6 +30,9 @@ export const AuthProvider = ({ children }) => {
     if (token && storedUser) {
       setUser(JSON.parse(storedUser));
       setLoading(false);
+      
+      // Silently refresh user data in background
+      refreshUser();
     } else if (token) {
       API.get('/auth/me')
         .then(res => {
@@ -60,8 +77,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Update user in context and localStorage
+  const updateUser = (updatedUserData) => {
+    const newUser = { ...user, ...updatedUserData };
+    setUser(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, refreshUser, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

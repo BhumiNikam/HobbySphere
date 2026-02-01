@@ -260,32 +260,37 @@ export default function SearchBar() {
                 </div>
 
                 {trending.length ? (
-                  trending.map((tag) => (
-                    <button
-                      key={tag._id}
-                      onClick={() => {
-                        const cleanTag = tag._id.startsWith('#') ? tag._id.substring(1) : tag._id;
-                        navigate(`/hashtag/${encodeURIComponent(cleanTag)}`);
-                        resetSearch();
-                      }}
-                      className="
-                        w-full px-4 py-3
-                        flex items-center justify-between
-                        hover:bg-indigo-50 dark:hover:bg-indigo-900/20
-                        transition
-                      "
-                    >
-                      <div className="flex items-center gap-3">
-                        <Hash size={16} className="text-indigo-500 dark:text-indigo-400" />
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
-                          #{tag._id}
+                  trending.map((tag) => {
+                    // ✅ FIX: Remove the # if backend already includes it
+                    const displayTag = tag._id.startsWith('#') ? tag._id.substring(1) : tag._id;
+                    const cleanTag = displayTag; // For navigation
+                    
+                    return (
+                      <button
+                        key={tag._id}
+                        onClick={() => {
+                          navigate(`/hashtag/${encodeURIComponent(cleanTag)}`);
+                          resetSearch();
+                        }}
+                        className="
+                          w-full px-4 py-3
+                          flex items-center justify-between
+                          hover:bg-indigo-50 dark:hover:bg-indigo-900/20
+                          transition
+                        "
+                      >
+                        <div className="flex items-center gap-3">
+                          <Hash size={16} className="text-indigo-500 dark:text-indigo-400" />
+                          <span className="font-medium text-slate-900 dark:text-slate-100">
+                            #{displayTag}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {tag.count} {t('search.posts').toLowerCase()}
                         </span>
-                      </div>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {tag.count} {t('search.posts').toLowerCase()}
-                      </span>
-                    </button>
-                  ))
+                      </button>
+                    );
+                  })
                 ) : (
                   <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                     {t('search.noResults')}

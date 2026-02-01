@@ -9,7 +9,6 @@ exports.searchByHashtag = async (req, res) => {
     const limit = 10;
     const skip = (page - 1) * limit;
 
-
     const posts = await Post.find({ hashtags: `#${tag.toLowerCase()}` })
       .populate('author', 'username fullName profileImage')
       .sort({ createdAt: -1 })
@@ -29,15 +28,33 @@ exports.searchByHashtag = async (req, res) => {
   }
 };
 
-// Search users
+// ✅ UPDATED: Search users (excludes guest accounts)
 exports.searchUsers = async (req, res) => {
   try {
     const { query } = req.query;
     
+    if (!query) {
+      return res.json([]);
+    }
+    
     const users = await User.find({
-      $or: [
-        { username: { $regex: query, $options: 'i' } },
-        { fullName: { $regex: query, $options: 'i' } }
+      $and: [
+        {
+          $or: [
+            { username: { $regex: query, $options: 'i' } },
+            { fullName: { $regex: query, $options: 'i' } }
+          ]
+        },
+        // ✅ EXCLUDE GUEST ACCOUNTS - Both by flag and username pattern
+        { 
+          $or: [
+            { isGuest: { $ne: true } },
+            { isGuest: { $exists: false } }
+          ]
+        },
+        {
+          username: { $not: /^guest_/i }
+        }
       ]
     })
     .select('username fullName profileImage bio')

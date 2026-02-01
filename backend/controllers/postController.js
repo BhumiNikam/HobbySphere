@@ -89,7 +89,8 @@ exports.createPost = async (req, res) => {
 };
 
 /* =====================================================
-   COMMUNITY FEED
+   HOME FEED - ALL POSTS FROM ALL USERS
+   ✅ Shows ALL posts regardless of community or following status
 ===================================================== */
 exports.getFeed = async (req, res) => {
   try {
@@ -97,21 +98,16 @@ exports.getFeed = async (req, res) => {
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const user = await User.findById(req.user._id).select('communities');
-
-    if (!user.communities?.length) {
-      return res.json({ posts: [], hasMore: false });
-    }
-
+    // ✅ Get ALL posts from ALL users
     const [posts, total] = await Promise.all([
-      Post.find({ community: { $in: user.communities } })
+      Post.find({})
         .populate('author', 'username fullName profileImage')
         .populate('community', 'name slug')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Post.countDocuments({ community: { $in: user.communities } }),
+      Post.countDocuments({}),
     ]);
 
     res.json({
@@ -125,6 +121,7 @@ exports.getFeed = async (req, res) => {
 
 /* =====================================================
    FOLLOWING FEED
+   ✅ Shows only posts from users you follow
 ===================================================== */
 exports.getFollowingFeed = async (req, res) => {
   try {
@@ -141,6 +138,7 @@ exports.getFollowingFeed = async (req, res) => {
     const [posts, total] = await Promise.all([
       Post.find({ author: { $in: user.following } })
         .populate('author', 'username fullName profileImage')
+        .populate('community', 'name slug')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

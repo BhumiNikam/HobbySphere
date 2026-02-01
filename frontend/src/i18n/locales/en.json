@@ -9,7 +9,10 @@
     "logout": "Logout",
     "create": "Create",
     "createPost": "Create Post",
-    "createCommunity": "Create Community"
+    "createCommunity": "Create Community",
+    "notifications": "Notifications",
+    "changeTheme": "Toggle Theme",
+    "changeLanguage": "Change Language"
   },
   "post": {
     "like": "Like",
@@ -66,7 +69,11 @@
     "alreadyHaveAccount": "Already have an account?",
     "resetPassword": "Reset Password",
     "newPassword": "New Password",
-    "confirmPassword": "Confirm Password"
+    "confirmPassword": "Confirm Password",
+    "guestWarning": "⚠️ Guest Mode: Your data will be deleted when you logout.",
+    "guestWarningDetail": "Are you sure you want to logout? All your data will be permanently deleted.",
+    "yesLogout": "Yes, Logout",
+    "stayLoggedIn": "Stay Logged In"
   },
   "search": {
     "searchPlaceholder": "Search...",
@@ -95,5 +102,9 @@
     "trending": "Trending Hashtags",
     "suggested": "Suggested Users",
     "suggestedCommunities": "Suggested Communities"
+  },
+  "feed": {
+    "forYou": "For You",
+    "following": "Following"
   }
 }

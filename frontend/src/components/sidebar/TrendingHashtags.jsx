@@ -65,6 +65,9 @@ export default function TrendingHashtags() {
           {tags.map((tag, index) => {
             if (!tag?._id) return null;
 
+            // ✅ FIX: Remove the # if backend already includes it
+            const displayTag = tag._id.startsWith('#') ? tag._id.substring(1) : tag._id;
+
             return (
               <li
                 key={tag._id}
@@ -81,7 +84,7 @@ export default function TrendingHashtags() {
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-800 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    #{tag._id}
+                    #{displayTag}
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {tag.count || 0} {t('search.posts').toLowerCase()}

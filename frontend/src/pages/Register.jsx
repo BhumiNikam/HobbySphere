@@ -58,38 +58,38 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold text-white mb-2">🎨 HobbySphere</h1>
-          <p className="text-indigo-100">Join the hobby enthusiast community</p>
+          <p className="text-indigo-100 dark:text-indigo-200">Join the hobby enthusiast community</p>
         </div>
 
         {/* Register Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Account</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Create Account</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Full Name</label>
               <input
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                 placeholder="John Doe"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
               <input
                 type="text"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                 placeholder="johndoe"
                 required
                 minLength={3}
@@ -98,32 +98,32 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                 placeholder="you@example.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                   placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -137,28 +137,28 @@ export default function Register() {
                       <div
                         key={level}
                         className={`h-1 flex-1 rounded ${
-                          level <= passwordStrength ? getStrengthColor(passwordStrength) : 'bg-gray-200'
+                          level <= passwordStrength ? getStrengthColor(passwordStrength) : 'bg-gray-200 dark:bg-gray-600'
                         }`}
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
                     Password strength: <span className="font-semibold">{getStrengthText(passwordStrength)}</span>
                   </p>
-                  <ul className="text-xs text-gray-500 mt-1 space-y-1">
-                    <li className={formData.password.length >= 8 ? 'text-green-600' : ''}>
+                  <ul className="text-xs text-gray-500 dark:text-gray-400 mt-1 space-y-1">
+                    <li className={formData.password.length >= 8 ? 'text-green-600 dark:text-green-400' : ''}>
                       ✓ At least 8 characters
                     </li>
-                    <li className={/[A-Z]/.test(formData.password) ? 'text-green-600' : ''}>
+                    <li className={/[A-Z]/.test(formData.password) ? 'text-green-600 dark:text-green-400' : ''}>
                       ✓ One uppercase letter
                     </li>
-                    <li className={/[a-z]/.test(formData.password) ? 'text-green-600' : ''}>
+                    <li className={/[a-z]/.test(formData.password) ? 'text-green-600 dark:text-green-400' : ''}>
                       ✓ One lowercase letter
                     </li>
-                    <li className={/\d/.test(formData.password) ? 'text-green-600' : ''}>
+                    <li className={/\d/.test(formData.password) ? 'text-green-600 dark:text-green-400' : ''}>
                       ✓ One number
                     </li>
-                    <li className={/[!@#$%^&*(),.?":{}|<>]/.test(formData.password) ? 'text-green-600' : ''}>
+                    <li className={/[!@#$%^&*(),.?":{}|<>]/.test(formData.password) ? 'text-green-600 dark:text-green-400' : ''}>
                       ✓ One special character
                     </li>
                   </ul>
@@ -176,16 +176,16 @@ export default function Register() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               Already have an account?{' '}
-              <Link to="/login" className="text-indigo-600 font-semibold hover:text-indigo-700">
+              <Link to="/login" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300">
                 Login
               </Link>
             </p>
           </div>
         </div>
 
-        <p className="text-center text-indigo-100 text-sm mt-6">
+        <p className="text-center text-indigo-100 dark:text-indigo-200 text-sm mt-6">
           © 2026 HobbySphere. Made with ❤️
         </p>
       </div>

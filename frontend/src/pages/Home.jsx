@@ -1,7 +1,8 @@
 import { useEffect, useState, useContext, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import PostCard from '../components/PostCard';
 import API from '../services/api';
 import PostSkeleton from '../components/ui/PostSkeleton';
@@ -23,6 +24,8 @@ function FeedSkeleton() {
 export default function Home() {
   const { user } = useContext(AuthContext);
   const { socket } = useSocket();
+  const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [posts, setPosts] = useState(null);
   const [page, setPage] = useState(1);
@@ -180,17 +183,22 @@ export default function Home() {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
       {/* Main content column */}
       <div className="w-full space-y-6 py-6 min-w-0">
-        {/* ✅ FIX: Tab selector for desktop */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-1 inline-flex gap-1">
-          <button className="px-6 py-2 rounded-xl bg-indigo-600 text-white font-medium text-sm transition-all">
-            For You
-          </button>
-          <Link
-            to="/following"
-            className="px-6 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 font-medium text-sm transition-all"
-          >
-            Following
-          </Link>
+        {/* ✅ MOBILE ONLY: Tab switcher */}
+        <div className="lg:hidden sticky top-[120px] sm:top-24 z-30 bg-slate-50 dark:bg-slate-950 -mx-4 px-4 pb-4">
+          <div className="flex gap-2 bg-white dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => navigate('/')}
+              className="flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors bg-indigo-600 text-white"
+            >
+              {t('feed.forYou')}
+            </button>
+            <button
+              onClick={() => navigate('/following')}
+              className="flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              {t('feed.following')}
+            </button>
+          </div>
         </div>
 
         {hasNewPosts && (
