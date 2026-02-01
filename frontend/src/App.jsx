@@ -124,15 +124,15 @@ function Layout({ children }) {
                 {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
               </button>
 
-              {/* Brand */}
-              <Link to="/" className="flex items-center gap-2 sm:gap-3">
+              {/* Brand - NOT A HOME LINK, JUST LOGO */}
+              <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-md">
                   H
                 </div>
                 <span className="hidden sm:block font-bold tracking-tight text-slate-900 dark:text-slate-100 text-lg">
                   HobbySphere
                 </span>
-              </Link>
+              </div>
             </div>
 
             {/* Center: Search (Desktop) */}
@@ -184,7 +184,9 @@ function Layout({ children }) {
                   )}
                 </div>
 
-                {/* ✅ FIX: Remove Home and Following icon links on desktop */}
+                {/* ✅ DESKTOP: Show Home and Following icons */}
+                <NavLink to="/" active={location.pathname === '/'} icon={<HomeIcon size={20} />} label="Home" />
+                <NavLink to="/following" active={location.pathname === '/following'} icon={<UserCheck size={20} />} label="Following" />
                 <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label="Communities" />
               </div>
 
@@ -273,28 +275,17 @@ function Layout({ children }) {
           />
           <div className="absolute left-0 top-[57px] sm:top-[65px] bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl animate-slide-in-left">
             <div className="flex flex-col p-4 space-y-2">
+              {/* ✅ MOBILE: Only show Home (not Following separately) */}
               <Link
                 to="/"
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                  location.pathname === '/'
+                  location.pathname === '/' || location.pathname === '/following'
                     ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
                     : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <HomeIcon size={20} />
                 Home
-              </Link>
-
-              <Link
-                to="/following"
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                  location.pathname === '/following'
-                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <UserCheck size={20} />
-                Following
               </Link>
 
               <Link
