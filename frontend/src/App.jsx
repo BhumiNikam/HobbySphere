@@ -12,10 +12,6 @@ import {
   Languages,
   Menu,
   X,
-  UserCheck,
-  TrendingUp,
-  UserPlus,
-  Hash,
 } from 'lucide-react';
 import {
   BrowserRouter,
@@ -51,7 +47,6 @@ import NotificationBell from './components/NotificationBell';
 import SearchBar from './components/SearchBar';
 import ScrollToTop from './components/ScrollToTop';
 import PostForm from './components/PostForm';
-import RightSidebar from './components/sidebar/RightSidebar';
 import TrendingHashtags from './components/sidebar/TrendingHashtags';
 import SuggestedUsers from './components/sidebar/SuggestedUsers';
 import SuggestedCommunities from './components/sidebar/SuggestedCommunities';
@@ -206,7 +201,7 @@ function Layout({ children }) {
                 </div>
               </div>
 
-              {/* Home Icon - Before Notifications */}
+              {/* Home Icon */}
               <Link
                 to="/"
                 className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
@@ -215,7 +210,7 @@ function Layout({ children }) {
                 <HomeIcon size={20} />
               </Link>
 
-              {/* Communities Icon - Before Notifications */}
+              {/* Communities Icon */}
               <Link
                 to="/communities"
                 className={`nav-link ${isActive('/communities') ? 'active' : ''}`}
@@ -242,7 +237,7 @@ function Layout({ children }) {
                 <User size={20} />
               </Link>
 
-              {/* ✅ DARK MODE - DESKTOP ONLY (removed from navbar on mobile) */}
+              {/* Dark Mode - Desktop Only */}
               <button
                 onClick={toggleTheme}
                 className="nav-link hidden lg:block"
@@ -251,7 +246,7 @@ function Layout({ children }) {
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              {/* Language Selector - DESKTOP */}
+              {/* Language Selector - Desktop */}
               <div className="relative hidden lg:block">
                 <button
                   onClick={() => setShowLangMenu(!showLangMenu)}
@@ -293,7 +288,7 @@ function Layout({ children }) {
             </div>
           </div>
 
-          {/* Mobile Search Bar - Hide when menu is open */}
+          {/* Mobile Search Bar */}
           {!showMobileMenu && (
             <div className="lg:hidden pb-3 pt-1">
               <SearchBar />
@@ -343,19 +338,14 @@ function Layout({ children }) {
           <div className="absolute left-0 top-[57px] sm:top-[65px] bottom-0 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl animate-slide-in-left overflow-y-auto">
             <div className="flex flex-col p-4 space-y-2">
               
-              {/* ===== MOBILE SIDEBAR COMPONENTS ===== */}
+              {/* Mobile Sidebar Components */}
               <div className="space-y-4 pb-2">
-                {/* Trending Hashtags */}
                 <div className="px-2">
                   <TrendingHashtags />
                 </div>
-
-                {/* Suggested Users */}
                 <div className="px-2">
                   <SuggestedUsers />
                 </div>
-
-                {/* Suggested Communities */}
                 <div className="px-2">
                   <SuggestedCommunities />
                 </div>
@@ -363,7 +353,7 @@ function Layout({ children }) {
 
               <div className="divider" />
 
-              {/* ===== DARK MODE TOGGLE ===== */}
+              {/* Dark Mode Toggle */}
               <button
                 onClick={() => {
                   toggleTheme();
@@ -377,7 +367,7 @@ function Layout({ children }) {
 
               <div className="divider" />
 
-              {/* ===== LANGUAGE SELECTOR ===== */}
+              {/* Language Selector */}
               <div className="px-4 py-2">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">{t('nav.changeLanguage')}</p>
                 <div className="space-y-1">
@@ -436,7 +426,7 @@ function Layout({ children }) {
         {children}
       </main>
 
-      {/* ================= MOBILE FAB (with Create Community option) ================= */}
+      {/* ================= MOBILE FAB ================= */}
       {showFab && (
         <div className="lg:hidden fixed bottom-6 right-6 z-40 flex flex-col gap-3">
           {/* Create Community Button */}
@@ -461,22 +451,6 @@ function Layout({ children }) {
 
       <ScrollToTop />
     </div>
-  );
-}
-
-/* =========================
-   NAV LINK
-========================= */
-function NavLink({ to, icon, active, label }) {
-  return (
-    <Link
-      to={to}
-      className={`nav-link ${active ? 'active' : ''}`}
-      title={label}
-    >
-      {icon}
-      <span className="hidden xl:inline text-sm">{label}</span>
-    </Link>
   );
 }
 
@@ -511,8 +485,11 @@ export default function App() {
               <Route path="/profile/:username/followers" element={<ProtectedRoute><Layout><FollowersList /></Layout></ProtectedRoute>} />
               <Route path="/profile/:username/following" element={<ProtectedRoute><Layout><FollowingList /></Layout></ProtectedRoute>} />
               <Route path="/hashtag/:tag" element={<ProtectedRoute><Layout><Hashtag /></Layout></ProtectedRoute>} />
-              <Route path="/communities/*" element={<ProtectedRoute><Layout><CommunitiesLayout /></Layout></ProtectedRoute>} />
+              
+              {/* ✅ FIXED: CreateCommunity route BEFORE CommunitiesLayout wildcard */}
               <Route path="/communities/create" element={<ProtectedRoute><Layout><CreateCommunity /></Layout></ProtectedRoute>} />
+              <Route path="/communities/*" element={<ProtectedRoute><Layout><CommunitiesLayout /></Layout></ProtectedRoute>} />
+              
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             </Routes>
           </BrowserRouter>

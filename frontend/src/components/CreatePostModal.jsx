@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import PostForm from './PostForm';
 
 export default function CreatePostModal({ onClose }) {
+  const { t } = useTranslation();
 
   /* ================= PREVENT BACKGROUND SCROLL ================= */
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function CreatePostModal({ onClose }) {
       onClick={onClose}
       className="
         fixed inset-0 z-50
-        bg-black/50 backdrop-blur-sm
+        bg-black/50 dark:bg-black/70 backdrop-blur-sm
         flex items-center justify-center
         p-4
       "
@@ -36,7 +38,7 @@ export default function CreatePostModal({ onClose }) {
         className="
           bg-white dark:bg-slate-900 rounded-2xl
           w-full max-w-xl
-          shadow-2xl
+          shadow-2xl border border-slate-200 dark:border-slate-800
           animate-scale-in
           overflow-hidden
         "
@@ -44,7 +46,7 @@ export default function CreatePostModal({ onClose }) {
         {/* HEADER */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Create Post
+            {t('nav.createPost') || 'Create Post'}
           </h2>
 
           <button

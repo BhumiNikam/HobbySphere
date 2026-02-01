@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Globe, Users, Image as ImageIcon, X, Video } from 'lucide-react';
@@ -19,7 +19,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
   const [communities, setCommunities] = useState([]);
 
   // ✅ Fetch user's communities
-  useState(() => {
+  useEffect(() => {
     (async () => {
       try {
         const res = await API.get('/users/me');
@@ -46,12 +46,12 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
     const isVideo = file.type.startsWith('video/');
 
     if (isVideo && file.size > 50 * 1024 * 1024) {
-      toast.error('Video must be less than 50MB');
+      toast.error(t('post.videoTooLarge') || 'Video must be less than 50MB');
       return;
     }
 
     if (!isVideo && file.size > 10 * 1024 * 1024) {
-      toast.error('Image must be less than 10MB');
+      toast.error(t('post.imageTooLarge') || 'Image must be less than 10MB');
       return;
     }
 
@@ -101,13 +101,13 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
     e.preventDefault();
 
     if (!content.trim() && mediaFiles.length === 0) {
-      toast.error('Post content or media is required');
+      toast.error(t('post.contentRequired') || 'Post content or media is required');
       return;
     }
 
     // ✅ Validate community selection only if posting to community
     if (postTo === 'community' && !selectedCommunity) {
-      toast.error('Please select a community');
+      toast.error(t('post.selectCommunityRequired') || 'Please select a community');
       return;
     }
 
@@ -130,7 +130,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      toast.success('Post created successfully! 🎉');
+      toast.success(t('post.postCreated') || 'Post created successfully! 🎉');
       
       // Reset form
       setContent('');
@@ -141,7 +141,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
 
       onPostCreated?.();
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to create post';
+      const message = err.response?.data?.message || t('post.createFailed') || 'Failed to create post';
       toast.error(message);
       console.error('Post creation error:', err);
     } finally {
@@ -166,7 +166,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
             `}
           >
             <Globe size={18} />
-            Post to Profile
+            {t('post.postToProfile') || 'Post to Profile'}
           </button>
 
           <button
@@ -181,7 +181,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
             `}
           >
             <Users size={18} />
-            Post to Community
+            {t('post.postToCommunity') || 'Post to Community'}
           </button>
         </div>
       )}
@@ -195,7 +195,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
             className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             required={postTo === 'community'}
           >
-            <option value="">Select a community</option>
+            <option value="">{t('post.selectCommunity') || 'Select a community'}</option>
             {communities.map((community) => (
               <option key={community._id} value={community._id}>
                 {community.name}
@@ -204,7 +204,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
           </select>
           {communities.length === 0 && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-              You haven't joined any communities yet
+              {t('post.noCommunities') || "You haven't joined any communities yet"}
             </p>
           )}
         </div>
@@ -214,7 +214,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="What's on your mind?"
+        placeholder={t('post.whatOnMind') || "What's on your mind?"}
         className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
         rows={4}
         maxLength={2000}
@@ -281,7 +281,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-all"
           >
             <ImageIcon size={18} />
-            <span className="text-sm font-medium">Add Media</span>
+            <span className="text-sm font-medium">{t('post.addMedia') || 'Add Media'}</span>
           </label>
         </div>
 
@@ -290,7 +290,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
           disabled={loading || (!content.trim() && mediaFiles.length === 0)}
           className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl font-semibold transition-all disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40"
         >
-          {loading ? 'Posting...' : 'Post'}
+          {loading ? (t('post.posting') || 'Posting...') : (t('post.post') || 'Post')}
         </button>
       </div>
     </form>

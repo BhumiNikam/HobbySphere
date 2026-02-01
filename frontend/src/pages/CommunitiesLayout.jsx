@@ -1,13 +1,16 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import API from '../services/api';
 import PostCard from '../components/PostCard';
 import PostForm from '../components/PostForm';
 import toast from 'react-hot-toast';
-import { Users, Menu, X } from 'lucide-react';
+import { Users, Menu, X, Plus } from 'lucide-react';
 
 export default function CommunitiesLayout() {
   const { user } = useContext(AuthContext);
+  const { t } = useTranslation();
 
   const [myCommunities, setMyCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
@@ -27,8 +30,14 @@ export default function CommunitiesLayout() {
         )
       );
       setMyCommunities(joined);
-    } catch {
-      toast.error('Failed to load communities');
+      
+      // ✅ AUTO-SELECT FIRST COMMUNITY
+      if (joined.length > 0 && !selectedCommunity) {
+        setSelectedCommunity(joined[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch communities:', error);
+      toast.error(t('community.failedToLoad') || 'Failed to load communities');
     } finally {
       setLoading(false);
     }
@@ -40,123 +49,206 @@ export default function CommunitiesLayout() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
-      {/* ================= MAIN CONTENT ================= */}
-      <div className="w-full space-y-12 py-6 min-w-0">
-        {/* Mobile: Show toggle button when community is selected */}
-        {selectedCommunity && (
-          <button
-            onClick={() => setShowMobileSidebar(true)}
-            className="lg:hidden fixed bottom-20 right-6 z-30 bg-indigo-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-          >
-            <Menu size={20} />
-          </button>
-        )}
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+        {/* ================= MAIN CONTENT ================= */}
+        <div className="w-full space-y-6 min-w-0">
+          {/* ✅ MOBILE: Community Selector at Top */}
+          <div className="lg:hidden bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                {selectedCommunity ? (
+                  <button
+                    onClick={() => setShowMobileSidebar(true)}
+                    className="w-full flex items-center justify-between gap-3 text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100 truncate">
+                        {selectedCommunity.name}
+                      </h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {selectedCommunity.memberCount} {t('community.members').toLowerCase()}
+                      </p>
+                    </div>
+                    <Menu size={20} className="text-slate-600 dark:text-slate-400 flex-shrink-0" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowMobileSidebar(true)}
+                    className="w-full flex items-center justify-between gap-3 py-2 px-4 bg-slate-100 dark:bg-slate-700 rounded-lg"
+                  >
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">
+                      {t('community.selectCommunity') || 'Select Community'}
+                    </span>
+                    <Menu size={20} className="text-slate-600 dark:text-slate-400" />
+                  </button>
+                )}
+              </div>
+              
+              <Link
+                to="/communities/create"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium flex-shrink-0"
+              >
+                <Plus size={18} />
+                <span className="hidden sm:inline">{t('nav.create')}</span>
+              </Link>
+            </div>
+          </div>
 
-        {selectedCommunity ? (
-          <CommunityFeed
-            community={selectedCommunity}
-            user={user}
-          />
-        ) : (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-16 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
-            <Users className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-            <p className="text-slate-600 dark:text-slate-400">
-              Select a community to view posts
-            </p>
-            {/* Mobile: Show communities button if none selected */}
-            <button
-              onClick={() => setShowMobileSidebar(true)}
-              className="lg:hidden mt-4 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition"
-            >
-              View Communities
-            </button>
+          {/* MAIN FEED AREA */}
+          {selectedCommunity ? (
+            <CommunityFeed
+              community={selectedCommunity}
+              user={user}
+              t={t}
+            />
+          ) : (
+            // ✅ IMPROVED EMPTY STATE
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 sm:p-16 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
+              <Users className="w-20 h-20 mx-auto mb-6 text-slate-300 dark:text-slate-600" />
+              
+              {loading ? (
+                <p className="text-slate-600 dark:text-slate-400 text-lg">
+                  {t('common.loading') || 'Loading...'}
+                </p>
+              ) : myCommunities.length === 0 ? (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">
+                      {t('community.noCommunities') || 'No Communities Yet'}
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                      {t('community.joinOrCreate') || 'Join existing communities or create your own to start connecting with people who share your interests!'}
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                    <Link
+                      to="/communities"
+                      className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-semibold shadow-lg"
+                    >
+                      {t('community.discoverCommunities') || 'Discover Communities'}
+                    </Link>
+                    <Link
+                      to="/communities/create"
+                      className="px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition font-semibold"
+                    >
+                      {t('community.createCommunity') || 'Create Community'}
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        {/* ================= DESKTOP SIDEBAR ================= */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-24">
+            <CommunitySidebar
+              myCommunities={myCommunities}
+              loading={loading}
+              selectedCommunity={selectedCommunity}
+              onSelectCommunity={handleSelectCommunity}
+              t={t}
+            />
+          </div>
+        </aside>
+
+        {/* ================= MOBILE SIDEBAR (MODAL) ================= */}
+        {showMobileSidebar && (
+          <div className="lg:hidden fixed inset-0 z-50">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+              onClick={() => setShowMobileSidebar(false)}
+            />
+            
+            {/* Sidebar */}
+            <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-slate-900 shadow-xl animate-slide-in-right overflow-y-auto">
+              {/* Header */}
+              <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between z-10">
+                <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                  {t('community.myCommunities') || 'My Communities'}
+                </h2>
+                <button
+                  onClick={() => setShowMobileSidebar(false)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+                >
+                  <X size={20} className="text-slate-600 dark:text-slate-400" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4">
+                <CommunitySidebar
+                  myCommunities={myCommunities}
+                  loading={loading}
+                  selectedCommunity={selectedCommunity}
+                  onSelectCommunity={handleSelectCommunity}
+                  t={t}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {/* ================= DESKTOP SIDEBAR ================= */}
-      <aside className="hidden lg:block">
-        <div className="sticky top-24">
-          <CommunitySidebar
-            myCommunities={myCommunities}
-            loading={loading}
-            selectedCommunity={selectedCommunity}
-            onSelectCommunity={handleSelectCommunity}
-          />
-        </div>
-      </aside>
-
-      {/* ================= MOBILE SIDEBAR (MODAL) ================= */}
-      {showMobileSidebar && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
-            onClick={() => setShowMobileSidebar(false)}
-          />
-          
-          {/* Sidebar */}
-          <div className="absolute right-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 shadow-xl animate-slide-in-right overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between z-10">
-              <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">My Communities</h2>
-              <button
-                onClick={() => setShowMobileSidebar(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
-              >
-                <X size={20} className="text-slate-600 dark:text-slate-400" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-4">
-              <CommunitySidebar
-                myCommunities={myCommunities}
-                loading={loading}
-                selectedCommunity={selectedCommunity}
-                onSelectCommunity={handleSelectCommunity}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 /* ================= COMMUNITY SIDEBAR (SHARED) ================= */
-function CommunitySidebar({ myCommunities, loading, selectedCommunity, onSelectCommunity }) {
+function CommunitySidebar({ myCommunities, loading, selectedCommunity, onSelectCommunity, t }) {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
-      <h2 className="font-bold text-lg mb-4 text-slate-900 dark:text-slate-100">My Communities</h2>
+      <h2 className="font-bold text-lg mb-4 text-slate-900 dark:text-slate-100">
+        {t('community.myCommunities') || 'My Communities'}
+      </h2>
 
-      <button
-        onClick={() => (window.location.href = '/communities/create')}
-        className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition mb-4 text-sm font-medium"
+      <Link
+        to="/communities/create"
+        className="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition mb-4 text-sm font-medium flex items-center justify-center gap-2"
       >
-        + Create Community
-      </button>
+        <Plus size={16} />
+        {t('community.createCommunity') || 'Create Community'}
+      </Link>
 
       {loading ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-      ) : myCommunities.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          You haven't joined any communities yet.
+          {t('common.loading') || 'Loading...'}
         </p>
+      ) : myCommunities.length === 0 ? (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {t('community.notJoinedYet') || "You haven't joined any communities yet."}
+          </p>
+          <Link
+            to="/communities"
+            className="block text-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+          >
+            {t('community.discover') || 'Discover Communities'}
+          </Link>
+        </div>
       ) : (
-        <div className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <div className="space-y-1 max-h-[calc(100vh-250px)] overflow-y-auto">
           {myCommunities.map((community) => (
             <button
               key={community._id}
               onClick={() => onSelectCommunity(community)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition ${
                 selectedCommunity?._id === community._id
                   ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold'
                   : 'hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}
             >
-              {community.name}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="truncate">{community.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {community.memberCount} {t('community.members').toLowerCase()}
+                  </p>
+                </div>
+              </div>
             </button>
           ))}
         </div>
@@ -166,7 +258,7 @@ function CommunitySidebar({ myCommunities, loading, selectedCommunity, onSelectC
 }
 
 /* ================= COMMUNITY FEED ================= */
-function CommunityFeed({ community, user }) {
+function CommunityFeed({ community, user, t }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAbout, setShowAbout] = useState(false);
@@ -177,10 +269,12 @@ function CommunityFeed({ community, user }) {
 
   const fetchPosts = async () => {
     try {
+      setLoading(true);
       const res = await API.get(`/communities/${community._id}/posts`);
       setPosts(res.data.posts || res.data);
-    } catch {
-      toast.error('Failed to load posts');
+    } catch (error) {
+      console.error('Failed to fetch posts:', error);
+      toast.error(t('post.failedToLoad') || 'Failed to load posts');
     } finally {
       setLoading(false);
     }
@@ -200,19 +294,22 @@ function CommunityFeed({ community, user }) {
 
   return (
     <div className="w-full space-y-6">
+      {/* COMMUNITY HEADER */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
         <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold mb-2 text-slate-900 dark:text-slate-100">{community.name}</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold mb-2 text-slate-900 dark:text-slate-100 truncate">
+              {community.name}
+            </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {community.memberCount} members
+              {community.memberCount} {t('community.members').toLowerCase()}
             </p>
           </div>
           <button
             onClick={() => setShowAbout(!showAbout)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm font-medium flex-shrink-0"
           >
-            {showAbout ? 'Hide About' : 'About'}
+            {showAbout ? (t('common.hide') || 'Hide') : (t('community.about') || 'About')}
           </button>
         </div>
 
@@ -223,7 +320,9 @@ function CommunityFeed({ community, user }) {
             </p>
             {community.rules && (
               <div className="mt-3 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
-                <h4 className="font-semibold text-sm mb-1 text-slate-900 dark:text-slate-100">Rules</h4>
+                <h4 className="font-semibold text-sm mb-1 text-slate-900 dark:text-slate-100">
+                  {t('community.rules') || 'Rules'}
+                </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap">
                   {community.rules}
                 </p>
@@ -233,6 +332,7 @@ function CommunityFeed({ community, user }) {
         )}
       </div>
 
+      {/* POST FORM */}
       {isMember && (
         <PostForm
           onPostCreated={handlePostCreated}
@@ -240,17 +340,20 @@ function CommunityFeed({ community, user }) {
         />
       )}
 
+      {/* POSTS */}
       {loading ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
-          <p className="text-slate-600 dark:text-slate-400">Loading posts…</p>
+          <p className="text-slate-600 dark:text-slate-400">
+            {t('common.loading') || 'Loading posts...'}
+          </p>
         </div>
       ) : posts.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="text-4xl mb-3">📝</div>
           <p className="text-slate-600 dark:text-slate-400">
             {isMember
-              ? 'No posts yet. Be the first!'
-              : 'Join this community to see posts'}
+              ? (t('community.beFirst') || 'No posts yet. Be the first!')
+              : (t('community.joinToSee') || 'Join this community to see posts')}
           </p>
         </div>
       ) : (

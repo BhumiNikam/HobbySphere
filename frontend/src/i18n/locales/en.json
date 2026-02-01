@@ -33,7 +33,15 @@
     "postToCommunity": "Post to Community",
     "selectCommunity": "Select a community",
     "addMedia": "Add Media",
-    "posting": "Posting..."
+    "posting": "Posting...",
+    "post": "Post",
+    "contentRequired": "Post content or media is required",
+    "selectCommunityRequired": "Please select a community",
+    "createFailed": "Failed to create post",
+    "videoTooLarge": "Video must be less than 50MB",
+    "imageTooLarge": "Image must be less than 10MB",
+    "noCommunities": "You haven't joined any communities yet",
+    "failedToLoad": "Failed to load posts"
   },
   "profile": {
     "posts": "Posts",
@@ -81,7 +89,18 @@
     "notFound": "Community not found",
     "about": "About",
     "beFirst": "Be the first to post!",
-    "joinToSee": "Join to see posts"
+    "joinToSee": "Join to see posts",
+    "myCommunities": "My Communities",
+    "selectCommunity": "Select Community",
+    "noCommunities": "No Communities Yet",
+    "joinOrCreate": "Join existing communities or create your own to start connecting with people who share your interests!",
+    "discoverCommunities": "Discover Communities",
+    "notJoinedYet": "You haven't joined any communities yet.",
+    "discover": "Discover Communities",
+    "created": "Community created!",
+    "createFailed": "Failed to create community",
+    "namePlaceholder": "e.g. Photography Enthusiasts",
+    "descPlaceholder": "What's this community about?"
   },
   "messages": {
     "conversations": "Conversations",
@@ -134,7 +153,8 @@
     "delete": "Delete",
     "confirm": "Confirm",
     "viewMore": "View More",
-    "viewLess": "View Less"
+    "viewLess": "View Less",
+    "hide": "Hide"
   },
   "sidebar": {
     "trending": "Trending Hashtags",

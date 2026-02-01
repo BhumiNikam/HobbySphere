@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import API from '../services/api';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Upload } from 'lucide-react';
 
 export default function CreateCommunity() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -42,10 +45,10 @@ export default function CreateCommunity() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      toast.success('Community created!');
+      toast.success(t('community.created') || 'Community created!');
       navigate(`/communities/${res.data._id}`);
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to create community');
+      toast.error(error.response?.data?.error || t('community.createFailed') || 'Failed to create community');
       setLoading(false);
     }
   };
@@ -62,7 +65,7 @@ export default function CreateCommunity() {
             <ArrowLeft size={24} className="text-slate-700 dark:text-slate-300" />
           </button>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-            Create Community
+            {t('community.createCommunity') || 'Create Community'}
           </h1>
         </div>
 
@@ -72,7 +75,7 @@ export default function CreateCommunity() {
           {/* Cover Image Upload */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-              Cover Image
+              {t('community.coverImage') || 'Cover Image'}
             </label>
             <div className="relative">
               {coverPreview ? (
@@ -86,13 +89,15 @@ export default function CreateCommunity() {
                     }}
                     className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white px-3 py-1 rounded-lg text-sm"
                   >
-                    Remove
+                    {t('community.remove') || 'Remove'}
                   </button>
                 </div>
               ) : (
                 <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition bg-slate-50 dark:bg-slate-800">
                   <Upload size={40} className="text-slate-400 dark:text-slate-500 mb-2" />
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Click to upload cover image</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    {t('community.uploadCover') || 'Click to upload cover image'}
+                  </p>
                   <input
                     type="file"
                     accept="image/*"
@@ -107,7 +112,7 @@ export default function CreateCommunity() {
           {/* Community Name */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-              Community Name *
+              {t('community.communityName') || 'Community Name'} *
             </label>
             <input
               type="text"
@@ -117,14 +122,14 @@ export default function CreateCommunity() {
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
               className="w-full px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition"
-              placeholder="e.g. Photography Enthusiasts"
+              placeholder={t('community.namePlaceholder') || 'e.g. Photography Enthusiasts'}
             />
           </div>
 
           {/* Description */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-              Description *
+              {t('community.communityDescription') || 'Description'} *
             </label>
             <textarea
               required
@@ -132,14 +137,14 @@ export default function CreateCommunity() {
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
               className="w-full px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl h-28 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition"
-              placeholder="What's this community about?"
+              placeholder={t('community.descPlaceholder') || "What's this community about?"}
             />
           </div>
 
           {/* Category */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-              Category *
+              {t('community.category') || 'Category'} *
             </label>
             <select
               required
@@ -147,7 +152,7 @@ export default function CreateCommunity() {
               onChange={(e) => setFormData({...formData, category: e.target.value})}
               className="w-full px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition"
             >
-              <option value="">Select category</option>
+              <option value="">{t('community.selectCategory') || 'Select category'}</option>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
@@ -157,29 +162,29 @@ export default function CreateCommunity() {
           {/* Privacy */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-              Privacy
+              {t('community.privacy') || 'Privacy'}
             </label>
             <select
               value={formData.privacy}
               onChange={(e) => setFormData({...formData, privacy: e.target.value})}
               className="w-full px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition"
             >
-              <option value="public">Public - Anyone can join</option>
-              <option value="private">Private - Approval required</option>
+              <option value="public">{t('community.publicCommunity') || 'Public - Anyone can join'}</option>
+              <option value="private">{t('community.privateCommunity') || 'Private - Approval required'}</option>
             </select>
           </div>
 
           {/* Rules */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-              Community Rules (Optional)
+              {t('community.rulesOptional') || 'Community Rules (Optional)'}
             </label>
             <textarea
               maxLength={2000}
               value={formData.rules}
               onChange={(e) => setFormData({...formData, rules: e.target.value})}
               className="w-full px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl h-32 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition"
-              placeholder="Set guidelines for your community..."
+              placeholder={t('community.setRules') || 'Set guidelines for your community...'}
             />
           </div>
 
@@ -190,14 +195,14 @@ export default function CreateCommunity() {
               disabled={loading}
               className="flex-1 bg-indigo-600 dark:bg-indigo-500 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 transition shadow-lg hover:shadow-xl"
             >
-              {loading ? 'Creating...' : 'Create Community'}
+              {loading ? (t('community.creating') || 'Creating...') : (t('community.createCommunity') || 'Create Community')}
             </button>
             <button
               type="button"
               onClick={() => navigate('/communities')}
               className="px-8 py-3 border-2 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
             >
-              Cancel
+              {t('community.cancel') || 'Cancel'}
             </button>
           </div>
         </form>

@@ -13,11 +13,32 @@ const upload = require('../middleware/upload');
 
 const router = express.Router();
 
+// ✅ ADD /me endpoint - MUST come before /:username to avoid conflicts
+router.get('/me', auth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.user._id)
+      .select('-password')
+      .populate('followers', 'username fullName profileImage')
+      .populate('following', 'username fullName profileImage')
+      .populate('communities', 'name slug');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json({ user });
+  } catch (error) {
+    console.error('Get /me error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 router.get('/suggestions', auth, getUserSuggestions);
 router.get('/:username', auth, getProfile);
 router.get('/:username/posts', auth, getUserPosts);
-router.get('/:username/followers', auth, getFollowers); // ADD
-router.get('/:username/following', auth, getFollowing); // ADD
+router.get('/:username/followers', auth, getFollowers);
+router.get('/:username/following', auth, getFollowing);
 router.post('/:userId/follow', auth, followUser);
 
 // Image upload and removal routes

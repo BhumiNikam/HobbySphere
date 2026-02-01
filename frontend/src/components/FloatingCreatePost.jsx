@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import PostForm from './PostForm';
 
 export default function FloatingCreatePost() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   /* =========================
@@ -24,12 +26,13 @@ export default function FloatingCreatePost() {
 
   return (
     <>
-      {/* ================= FLOATING BUTTON ================= */}
+      {/* ================= FLOATING BUTTON - HIDDEN ON MOBILE ================= */}
       <button
         onClick={() => setOpen(true)}
         className="
+          hidden md:flex
           fixed bottom-6 right-6 z-40
-          flex items-center gap-2
+          items-center gap-2
           px-5 py-3
           rounded-full
           bg-gradient-to-r from-indigo-600 to-purple-600
@@ -41,7 +44,7 @@ export default function FloatingCreatePost() {
         "
       >
         <Plus size={20} />
-        <span className="hidden sm:inline">Create</span>
+        <span>{t('nav.create') || 'Create'}</span>
       </button>
 
       {/* ================= MODAL ================= */}
@@ -68,7 +71,9 @@ export default function FloatingCreatePost() {
           >
             {/* HEADER */}
             <div className="flex justify-between items-center p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
-              <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Create Post</h2>
+              <h2 className="font-semibold text-lg text-slate-900 dark:text-slate-100">
+                {t('nav.createPost') || 'Create Post'}
+              </h2>
               <button
                 onClick={() => setOpen(false)}
                 className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"

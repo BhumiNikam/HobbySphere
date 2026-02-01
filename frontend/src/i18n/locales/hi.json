@@ -33,7 +33,15 @@
     "postToCommunity": "समुदाय में पोस्ट करें",
     "selectCommunity": "समुदाय चुनें",
     "addMedia": "मीडिया जोड़ें",
-    "posting": "पोस्ट किया जा रहा है..."
+    "posting": "पोस्ट किया जा रहा है...",
+    "post": "पोस्ट करें",
+    "contentRequired": "पोस्ट सामग्री या मीडिया आवश्यक है",
+    "selectCommunityRequired": "कृपया एक समुदाय चुनें",
+    "createFailed": "पोस्ट बनाने में विफल",
+    "videoTooLarge": "वीडियो 50MB से कम होना चाहिए",
+    "imageTooLarge": "इमेज 10MB से कम होनी चाहिए",
+    "noCommunities": "आपने अभी तक किसी समुदाय में शामिल नहीं हुए हैं",
+    "failedToLoad": "पोस्ट लोड करने में विफल"
   },
   "profile": {
     "posts": "पोस्ट",
@@ -81,7 +89,18 @@
     "notFound": "समुदाय नहीं मिला",
     "about": "के बारे में",
     "beFirst": "पहली पोस्ट करें!",
-    "joinToSee": "पोस्ट देखने के लिए शामिल हों"
+    "joinToSee": "पोस्ट देखने के लिए शामिल हों",
+    "myCommunities": "मेरे समुदाय",
+    "selectCommunity": "समुदाय चुनें",
+    "noCommunities": "अभी तक कोई समुदाय नहीं",
+    "joinOrCreate": "मौजूदा समुदायों में शामिल हों या अपनी रुचियों को साझा करने वाले लोगों से जुड़ने के लिए अपना खुद का बनाएं!",
+    "discoverCommunities": "समुदाय खोजें",
+    "notJoinedYet": "आपने अभी तक किसी समुदाय में शामिल नहीं हुए हैं।",
+    "discover": "समुदाय खोजें",
+    "created": "समुदाय बनाया गया!",
+    "createFailed": "समुदाय बनाने में विफल",
+    "namePlaceholder": "उदा. फोटोग्राफी प्रेमी",
+    "descPlaceholder": "यह समुदाय किस बारे में है?"
   },
   "messages": {
     "conversations": "बातचीत",
@@ -134,7 +153,8 @@
     "delete": "हटाएं",
     "confirm": "पुष्टि करें",
     "viewMore": "और देखें",
-    "viewLess": "कम देखें"
+    "viewLess": "कम देखें",
+    "hide": "छुपाएं"
   },
   "sidebar": {
     "trending": "ट्रेंडिंग हैशटैग",
