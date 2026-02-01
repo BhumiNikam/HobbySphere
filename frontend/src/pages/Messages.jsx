@@ -209,7 +209,7 @@ export default function Messages() {
               </p>
             </div>
           ) : (
-            <>
+            <div>
               {/* Active Conversations */}
               {conversations.length > 0 && (
                 <ChatList
@@ -222,13 +222,14 @@ export default function Messages() {
               {/* Following Users (without conversations) */}
               {followingUsers.length > 0 && (
                 <div>
-                  {conversations.length > 0 && (
-                    <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-y border-slate-200 dark:border-slate-800">
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                        Following
-                      </p>
-                    </div>
-                  )}
+                  <div className="px-4 py-3 bg-slate-100 dark:bg-slate-800 border-y border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                      <span>Following</span>
+                      <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full">
+                        {followingUsers.length}
+                      </span>
+                    </p>
+                  </div>
                   <div className="divide-y divide-slate-100 dark:divide-slate-800">
                     {followingUsers.map((user) => (
                       <button
@@ -265,7 +266,7 @@ export default function Messages() {
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </aside>
