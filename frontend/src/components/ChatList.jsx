@@ -8,7 +8,7 @@ export default function ChatList({
   const { user } = useAuth();
 
   const getOtherUser = (conversation) =>
-    conversation.participants.find(p => p._id !== user.id);
+    conversation.participants.find(p => p._id !== user._id && p._id !== user.id);
 
   const formatTime = (date) => {
     if (!date) return '';
@@ -113,7 +113,8 @@ export default function ChatList({
                     }
                   `}
                 >
-                  {conversation.lastMessage.sender === user.id && (
+                  {(conversation.lastMessage.sender === user.id || 
+                    conversation.lastMessage.sender === user._id) && (
                     <span className="font-medium">You: </span>
                   )}
                   {conversation.lastMessage.text}

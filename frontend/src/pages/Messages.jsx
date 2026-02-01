@@ -43,15 +43,24 @@ export default function Messages() {
       setConversations(conversationsRes.data);
       
       // Get following users and filter out those already in conversations
+      const currentUserId = followingRes.data.user._id || followingRes.data.user.id;
       const following = followingRes.data.user.following || [];
       const conversationUserIds = conversationsRes.data.map(conv => 
-        conv.participants.find(p => p._id !== followingRes.data.user._id)?._id
+        conv.participants.find(p => p._id !== currentUserId)?._id
       ).filter(Boolean);
       
       // Only show following users who don't have active conversations
       const followingWithoutConversations = following.filter(
         user => !conversationUserIds.includes(user._id)
       );
+      
+      console.log('Debug Messages:', {
+        currentUserId,
+        totalFollowing: following.length,
+        conversationUserIds,
+        followingWithoutConversations: followingWithoutConversations.length,
+        followingData: followingWithoutConversations
+      });
       
       setFollowingUsers(followingWithoutConversations);
     } catch (error) {
