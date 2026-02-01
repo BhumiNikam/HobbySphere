@@ -6,7 +6,7 @@ import API from '../services/api';
 import PostSkeleton from '../components/ui/PostSkeleton';
 import RightSidebar from '../components/sidebar/RightSidebar';
 
-const SEEN_POSTS_KEY = 'hobbysphere_seen_following_posts';
+const SEEN_POSTS_KEY = 'hobbysphere_seen_home_posts';
 const LIMIT = 5;
 
 function FeedSkeleton() {
@@ -19,7 +19,7 @@ function FeedSkeleton() {
   );
 }
 
-export default function FollowingFeed() {
+export default function Home() {
   const { user } = useContext(AuthContext);
   const { socket } = useSocket();
 
@@ -60,8 +60,9 @@ export default function FollowingFeed() {
         setLoadingMore(true);
       }
 
+      // Get ALL posts (no following filter)
       const res = await API.get(
-        `/posts/feed/following?page=${pageNum}&limit=${LIMIT}`
+        `/posts?page=${pageNum}&limit=${LIMIT}`
       );
 
       const newPosts = Array.isArray(res.data?.posts)
@@ -181,15 +182,15 @@ export default function FollowingFeed() {
       <div className="w-full space-y-6 py-6 min-w-0">
         {/* Tab selector */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-1 inline-flex gap-1">
+          <button className="px-6 py-2 rounded-xl bg-indigo-600 text-white font-medium text-sm transition-all">
+            For You
+          </button>
           <a
-            href="/"
+            href="/following"
             className="px-6 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 font-medium text-sm transition-all"
           >
-            For You
-          </a>
-          <button className="px-6 py-2 rounded-xl bg-indigo-600 text-white font-medium text-sm transition-all">
             Following
-          </button>
+          </a>
         </div>
 
         {hasNewPosts && (
@@ -208,19 +209,13 @@ export default function FollowingFeed() {
         ) : posts.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-12 text-center">
             <div className="max-w-md mx-auto space-y-4">
-              <div className="text-6xl">👥</div>
+              <div className="text-6xl">🌍</div>
               <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200">
                 No posts yet
               </h3>
               <p className="text-slate-500 dark:text-slate-400">
-                Follow people to see their updates in your feed ✨
+                Be the first to share something! ✨
               </p>
-              <a
-                href="/"
-                className="inline-block mt-4 px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-medium text-sm"
-              >
-                Discover Posts
-              </a>
             </div>
           </div>
         ) : (

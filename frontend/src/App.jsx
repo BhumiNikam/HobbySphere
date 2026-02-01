@@ -34,6 +34,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Messages from './pages/Messages';
+import Home from './pages/Home';
 import FollowingFeed from './pages/FollowingFeed';
 import FollowersList from './pages/FollowersList';
 import FollowingList from './pages/FollowingList';
@@ -182,7 +183,7 @@ function Layout({ children }) {
                   )}
                 </div>
 
-                <NavLink to="/following" active={isActive('/following')} icon={<Home size={20} />} label="Home" />
+                <NavLink to="/" active={isActive('/')} icon={<Home size={20} />} label="Home" />
                 <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label="Communities" />
               </div>
 
@@ -272,9 +273,9 @@ function Layout({ children }) {
           <div className="absolute left-0 top-[57px] sm:top-[65px] bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl animate-slide-in-left">
             <div className="flex flex-col p-4 space-y-2">
               <Link
-                to="/following"
+                to="/"
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                  isActive('/following')
+                  location.pathname === '/'
                     ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
                     : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
@@ -456,6 +457,7 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
 
+              <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
               <Route path="/following" element={<ProtectedRoute><Layout><FollowingFeed /></Layout></ProtectedRoute>} />
               <Route path="/profile/:username" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
               <Route path="/profile/:username/followers" element={<ProtectedRoute><Layout><FollowersList /></Layout></ProtectedRoute>} />
@@ -464,8 +466,6 @@ export default function App() {
               <Route path="/communities/*" element={<ProtectedRoute><Layout><CommunitiesLayout /></Layout></ProtectedRoute>} />
               <Route path="/communities/create" element={<ProtectedRoute><Layout><CreateCommunity /></Layout></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-
-              <Route path="/" element={<Navigate to="/following" />} />
             </Routes>
           </BrowserRouter>
         </SocketProvider>
