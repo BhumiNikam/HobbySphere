@@ -184,8 +184,7 @@ function Layout({ children }) {
                   )}
                 </div>
 
-                <NavLink to="/" active={location.pathname === '/'} icon={<HomeIcon size={20} />} label="Home" />
-                <NavLink to="/following" active={location.pathname === '/following'} icon={<UserCheck size={20} />} label="Following" />
+                {/* ✅ FIX: Remove Home and Following icon links on desktop */}
                 <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label="Communities" />
               </div>
 

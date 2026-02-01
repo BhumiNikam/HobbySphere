@@ -27,6 +27,9 @@ router.post(
 /* =====================================================
    FEEDS
 ===================================================== */
+// ✅ FIX: Add route for /api/posts (For You feed - all posts)
+router.get('/', auth, getFeed);
+
 router.get('/feed', auth, getFeed);
 router.get('/feed/following', auth, getFollowingFeed);
 
