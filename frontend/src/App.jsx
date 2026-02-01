@@ -145,15 +145,15 @@ function Layout({ children }) {
                 {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
               </button>
 
-              {/* Brand - CLICKABLE HOME LINK */}
-              <Link to="/" className="flex items-center gap-2 sm:gap-3">
+              {/* Brand - HobbySphere Logo */}
+              <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-md">
                   H
                 </div>
                 <span className="hidden sm:block font-bold tracking-tight text-slate-900 dark:text-slate-100 text-lg">
                   HobbySphere
                 </span>
-              </Link>
+              </div>
             </div>
 
             {/* Center: Search (Desktop) */}
@@ -204,13 +204,25 @@ function Layout({ children }) {
                     </>
                   )}
                 </div>
-
-                {/* ✅ HOME ICON IN NAVBAR */}
-                <NavLink to="/" active={location.pathname === '/'} icon={<HomeIcon size={20} />} label={t('nav.home')} />
-                
-                {/* ✅ COMMUNITIES IN NAVBAR */}
-                <NavLink to="/communities" active={isActive('/communities')} icon={<Users size={20} />} label={t('nav.communities')} />
               </div>
+
+              {/* Home Icon - Before Notifications */}
+              <Link
+                to="/"
+                className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+                title={t('nav.home')}
+              >
+                <HomeIcon size={20} />
+              </Link>
+
+              {/* Communities Icon - Before Notifications */}
+              <Link
+                to="/communities"
+                className={`nav-link ${isActive('/communities') ? 'active' : ''}`}
+                title={t('nav.communities')}
+              >
+                <Users size={20} />
+              </Link>
 
               {/* Notifications */}
               <NotificationBell />
@@ -281,10 +293,12 @@ function Layout({ children }) {
             </div>
           </div>
 
-          {/* Mobile Search Bar */}
-          <div className="lg:hidden pb-3 pt-1">
-            <SearchBar />
-          </div>
+          {/* Mobile Search Bar - Hide when menu is open */}
+          {!showMobileMenu && (
+            <div className="lg:hidden pb-3 pt-1">
+              <SearchBar />
+            </div>
+          )}
         </div>
       </nav>
 
