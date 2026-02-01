@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import api from '../services/api';
@@ -13,12 +13,14 @@ export function SocketProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const { user } = useAuth();
+  const socketRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
 
   // Fetch initial unread message count
   useEffect(() => {
     if (user) {
       fetchUnreadMessageCount();
-      fetchNotifications(); // ✅ Also fetch initial notifications
+      fetchNotifications();
     }
   }, [user]);
 
@@ -27,11 +29,10 @@ export function SocketProvider({ children }) {
       const { data } = await api.get('/messages/unread-count');
       setUnreadMessageCount(data.unreadCount);
     } catch (error) {
-      // Error fetching unread count
+      console.error('Error fetching unread count:', error);
     }
   };
 
-  // ✅ NEW: Fetch initial notifications
   const fetchNotifications = async () => {
     try {
       const { data } = await api.get('/notifications');
@@ -39,13 +40,19 @@ export function SocketProvider({ children }) {
       const unread = data.filter(n => !n.read).length;
       setUnreadCount(unread);
     } catch (error) {
-      // Error fetching notifications
+      console.error('Error fetching notifications:', error);
     }
   };
 
   // Socket connection setup
   useEffect(() => {
     if (!user) {
+      // Clean up socket if user logs out
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+        setSocket(null);
+      }
       return;
     }
 
@@ -54,87 +61,126 @@ export function SocketProvider({ children }) {
     if (!userId) {
       return;
     }
+
+    // ✅ FIX: Get socket URL from env, fallback to current origin
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
     
-    const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
+    // ✅ FIX: Better socket configuration
+    const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      autoConnect: true,
+      // ✅ Prevent connection before page is ready
+      forceNew: false,
+      // ✅ Add auth if needed
+      auth: {
+        userId: userId
+      }
     });
+
+    socketRef.current = newSocket;
     
     newSocket.on('connect', () => {
+      console.log('✅ Socket connected');
       newSocket.emit('register', userId);
     });
 
+    // ✅ FIX: Better error handling
     newSocket.on('connect_error', (error) => {
-      // Socket connection error
+      console.warn('⚠️ Socket connection error:', error.message);
+      // Don't show error toast, let it retry silently
     });
 
     newSocket.on('disconnect', (reason) => {
-      // Socket disconnected
+      console.log('🔌 Socket disconnected:', reason);
+      
+      // Only try to reconnect if it's not a manual disconnect
+      if (reason === 'io server disconnect') {
+        // Server initiated disconnect, reconnect manually
+        newSocket.connect();
+      }
     });
 
-    // ✅ FIXED: Notification listener
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
+    });
+
+    newSocket.on('reconnect_attempt', (attemptNumber) => {
+      console.log('🔄 Attempting to reconnect...', attemptNumber);
+    });
+
+    newSocket.on('reconnect_error', (error) => {
+      console.warn('⚠️ Reconnection error:', error.message);
+    });
+
+    newSocket.on('reconnect_failed', () => {
+      console.error('❌ Failed to reconnect after maximum attempts');
+    });
+
+    // Notification listener
     newSocket.on('notification', (notification) => {
-      // Add to notifications array
       setNotifications(prev => {
-        // Check if notification already exists
         if (prev.some(n => n._id === notification._id)) {
           return prev;
         }
-        const newNotifs = [notification, ...prev];
-        return newNotifs;
+        return [notification, ...prev];
       });
       
-      // Increment unread count
-      setUnreadCount(prev => {
-        const newCount = prev + 1;
-        return newCount;
-      });
+      setUnreadCount(prev => prev + 1);
       
       // Browser notification
       if (Notification.permission === 'granted') {
         new Notification('HobbySphere', {
           body: getNotificationText(notification),
-          icon: notification.from?.profileImage || '/vite.svg'
+          icon: notification.from?.profileImage || '/favicon.svg'
         });
       }
     });
 
-    // ✅ FIXED: Message listener
+    // Message listener
     newSocket.on('newMessage', ({ conversationId, message }) => {
-      // Increment unread message count
-      setUnreadMessageCount(prev => {
-        const newCount = prev + 1;
-        return newCount;
-      });
+      setUnreadMessageCount(prev => prev + 1);
       
       // Browser notification
       if (Notification.permission === 'granted') {
         new Notification('New Message', {
           body: `${message.sender?.fullName || 'Someone'}: ${message.text || '📷 Image'}`,
-          icon: message.sender?.profileImage || '/vite.svg'
+          icon: message.sender?.profileImage || '/favicon.svg'
         });
       }
     });
 
-    // Post update listeners (for real-time likes/comments)
+    // Post update listeners
     newSocket.on('post_liked', ({ postId, userId, likesCount }) => {
-      // This will be caught by PostCard components
+      // Handled by PostCard components
     });
 
     newSocket.on('post_unliked', ({ postId, userId, likesCount }) => {
-      // This will be caught by PostCard components
+      // Handled by PostCard components
     });
 
     newSocket.on('post_commented', ({ postId, comment, commentsCount }) => {
-      // This will be caught by PostCard components
+      // Handled by PostCard components
     });
 
     setSocket(newSocket);
 
+    // ✅ FIX: Proper cleanup
     return () => {
-      newSocket.close();
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      
+      if (newSocket) {
+        newSocket.removeAllListeners();
+        newSocket.close();
+      }
+      
+      socketRef.current = null;
       setSocket(null);
     };
   }, [user]);
@@ -164,7 +210,7 @@ export function SocketProvider({ children }) {
       unreadMessageCount,
       setUnreadMessageCount,
       fetchUnreadMessageCount,
-      fetchNotifications // ✅ Export this for manual refresh
+      fetchNotifications
     }}>
       {children}
     </SocketContext.Provider>

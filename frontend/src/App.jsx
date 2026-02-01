@@ -79,7 +79,6 @@ function Layout({ children }) {
   const location = useLocation();
 
   const [showCreatePost, setShowCreatePost] = useState(false);
-  const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showFab, setShowFab] = useState(true);
@@ -158,47 +157,15 @@ function Layout({ children }) {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1 sm:gap-2">
-              {/* Desktop Navigation */}
+              {/* Desktop Navigation - ONLY CREATE POST BUTTON */}
               <div className="hidden lg:flex items-center gap-1">
-                {/* Create Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setShowCreateMenu(!showCreateMenu)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
-                  >
-                    <Plus size={16} />
-                    <span className="hidden xl:inline">{t('nav.create')}</span>
-                  </button>
-
-                  {showCreateMenu && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setShowCreateMenu(false)}
-                      />
-                      <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-20 overflow-hidden">
-                        <button
-                          onClick={() => {
-                            setShowCreateMenu(false);
-                            setShowCreatePost(true);
-                          }}
-                          className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 transition-colors"
-                        >
-                          <FileText size={16} /> {t('nav.createPost')}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowCreateMenu(false);
-                            window.location.href = '/communities/create';
-                          }}
-                          className="w-full px-4 py-3 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 transition-colors"
-                        >
-                          <Users size={16} /> {t('nav.createCommunity')}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
+                <button
+                  onClick={() => setShowCreatePost(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
+                >
+                  <Plus size={16} />
+                  <span className="hidden xl:inline">{t('nav.create')}</span>
+                </button>
               </div>
 
               {/* Home Icon */}
@@ -426,19 +393,9 @@ function Layout({ children }) {
         {children}
       </main>
 
-      {/* ================= MOBILE FAB ================= */}
+      {/* ================= MOBILE FAB - ONLY CREATE POST ================= */}
       {showFab && (
-        <div className="lg:hidden fixed bottom-6 right-6 z-40 flex flex-col gap-3">
-          {/* Create Community Button */}
-          <button
-            onClick={() => window.location.href = '/communities/create'}
-            className="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-            title={t('nav.createCommunity')}
-          >
-            <Users size={20} />
-          </button>
-          
-          {/* Create Post Button */}
+        <div className="lg:hidden fixed bottom-6 right-6 z-40">
           <button
             onClick={() => setShowCreatePost(true)}
             className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
@@ -486,7 +443,6 @@ export default function App() {
               <Route path="/profile/:username/following" element={<ProtectedRoute><Layout><FollowingList /></Layout></ProtectedRoute>} />
               <Route path="/hashtag/:tag" element={<ProtectedRoute><Layout><Hashtag /></Layout></ProtectedRoute>} />
               
-              {/* ✅ FIXED: CreateCommunity route BEFORE CommunitiesLayout wildcard */}
               <Route path="/communities/create" element={<ProtectedRoute><Layout><CreateCommunity /></Layout></ProtectedRoute>} />
               <Route path="/communities/*" element={<ProtectedRoute><Layout><CommunitiesLayout /></Layout></ProtectedRoute>} />
               

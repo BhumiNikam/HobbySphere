@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import API from '../services/api';
 import PostCard from '../components/PostCard';
-import PostForm from '../components/PostForm';
 import toast from 'react-hot-toast';
 import { Users, Menu, X, Plus } from 'lucide-react';
 
@@ -280,10 +279,6 @@ function CommunityFeed({ community, user, t }) {
     }
   };
 
-  const handlePostCreated = (newPost) => {
-    setPosts((prev) => [newPost, ...prev]);
-  };
-
   const handlePostDeleted = (postId) => {
     setPosts((prev) => prev.filter((p) => p._id !== postId));
   };
@@ -332,13 +327,7 @@ function CommunityFeed({ community, user, t }) {
         )}
       </div>
 
-      {/* POST FORM */}
-      {isMember && (
-        <PostForm
-          onPostCreated={handlePostCreated}
-          communityId={community._id}
-        />
-      )}
+      {/* ✅ REMOVED: PostForm - Users create posts via navbar/FAB modal */}
 
       {/* POSTS */}
       {loading ? (
@@ -352,7 +341,7 @@ function CommunityFeed({ community, user, t }) {
           <div className="text-4xl mb-3">📝</div>
           <p className="text-slate-600 dark:text-slate-400">
             {isMember
-              ? (t('community.beFirst') || 'No posts yet. Be the first!')
+              ? (t('community.beFirst') || 'No posts yet. Be the first to post using the Create button!')
               : (t('community.joinToSee') || 'Join this community to see posts')}
           </p>
         </div>

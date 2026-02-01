@@ -17,26 +17,35 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
   const [postTo, setPostTo] = useState(propCommunityId ? 'community' : 'profile');
   const [selectedCommunity, setSelectedCommunity] = useState(propCommunityId || '');
   const [communities, setCommunities] = useState([]);
+  const [loadingCommunities, setLoadingCommunities] = useState(true);
 
-  // ✅ Fetch user's communities
+  // ✅ FIX: Fetch user's JOINED communities properly
   useEffect(() => {
-    (async () => {
+    const fetchCommunities = async () => {
       try {
-        const res = await API.get('/users/me');
-        const userCommunities = res.data.user.communities || [];
+        setLoadingCommunities(true);
+        const res = await API.get('/communities');
+        const allCommunities = res.data.communities || [];
         
-        // Fetch full community details
-        if (userCommunities.length > 0) {
-          const communityDetails = await Promise.all(
-            userCommunities.map(id => API.get(`/communities/${id}`).catch(() => null))
-          );
-          setCommunities(communityDetails.filter(Boolean).map(r => r.data));
-        }
+        // Filter to only show communities the user has joined
+        const joinedCommunities = allCommunities.filter((community) =>
+          community.members.some(
+            (member) => 
+              (typeof member === 'string' ? member : member._id) === user._id
+          )
+        );
+        
+        setCommunities(joinedCommunities);
       } catch (err) {
         console.error('Failed to fetch communities:', err);
+        toast.error(t('post.failedToLoadCommunities') || 'Failed to load communities');
+      } finally {
+        setLoadingCommunities(false);
       }
-    })();
-  }, []);
+    };
+
+    fetchCommunities();
+  }, [user._id, t]);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -117,9 +126,12 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
       const formData = new FormData();
       formData.append('content', content);
 
-      // ✅ Only add communityId if posting to community
+      // ✅ FIX: Ensure selectedCommunity is a string ID, not an object
       if (postTo === 'community' && selectedCommunity) {
-        formData.append('communityId', selectedCommunity);
+        const communityId = typeof selectedCommunity === 'string' 
+          ? selectedCommunity 
+          : selectedCommunity._id;
+        formData.append('communityId', communityId);
       }
 
       mediaFiles.forEach((file) => {
@@ -136,7 +148,8 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
       setContent('');
       setMediaFiles([]);
       setMediaPreview(null);
-      setSelectedCommunity('');
+      setSelectedCommunity(propCommunityId || '');
+      if (!propCommunityId) setPostTo('profile');
       if (fileInputRef.current) fileInputRef.current.value = '';
 
       onPostCreated?.();
@@ -156,7 +169,10 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setPostTo('profile')}
+            onClick={() => {
+              setPostTo('profile');
+              setSelectedCommunity('');
+            }}
             className={`
               flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all
               ${postTo === 'profile'
@@ -194,15 +210,21 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
             onChange={(e) => setSelectedCommunity(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             required={postTo === 'community'}
+            disabled={loadingCommunities}
           >
-            <option value="">{t('post.selectCommunity') || 'Select a community'}</option>
+            <option value="">
+              {loadingCommunities 
+                ? (t('common.loading') || 'Loading...') 
+                : (t('post.selectCommunity') || 'Select a community')
+              }
+            </option>
             {communities.map((community) => (
               <option key={community._id} value={community._id}>
                 {community.name}
               </option>
             ))}
           </select>
-          {communities.length === 0 && (
+          {!loadingCommunities && communities.length === 0 && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
               {t('post.noCommunities') || "You haven't joined any communities yet"}
             </p>
@@ -287,7 +309,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
 
         <button
           type="submit"
-          disabled={loading || (!content.trim() && mediaFiles.length === 0)}
+          disabled={loading || (!content.trim() && mediaFiles.length === 0) || (postTo === 'community' && !selectedCommunity)}
           className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl font-semibold transition-all disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40"
         >
           {loading ? (t('post.posting') || 'Posting...') : (t('post.post') || 'Post')}
