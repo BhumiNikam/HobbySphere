@@ -1,12 +1,10 @@
 import {
   Home as HomeIcon,
-  Film,
   Users,
   MessageCircle,
   User,
   LogOut,
   Plus,
-  FileText,
   Moon,
   Sun,
   Languages,
@@ -24,7 +22,7 @@ import {
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { SocketProvider, useSocket } from './context/SocketContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast, { Toaster } from 'react-hot-toast';
 import './i18n';
@@ -33,27 +31,38 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Messages from './pages/Messages';
 import Home from './pages/Home';
-import FollowingFeed from './pages/FollowingFeed';
-import FollowersList from './pages/FollowersList';
-import FollowingList from './pages/FollowingList';
-import Profile from './pages/Profile';
-import Hashtag from './pages/Hashtag';
-import CommunitiesLayout from './pages/CommunitiesLayout';
-import CreateCommunity from './pages/CreateCommunity';
+
+// ✅ LAZY LOAD HEAVY COMPONENTS
+const Messages = lazy(() => import('./pages/Messages'));
+const Profile = lazy(() => import('./pages/Profile'));
+const FollowingFeed = lazy(() => import('./pages/FollowingFeed'));
+const FollowersList = lazy(() => import('./pages/FollowersList'));
+const FollowingList = lazy(() => import('./pages/FollowingList'));
+const Hashtag = lazy(() => import('./pages/Hashtag'));
+const CommunitiesLayout = lazy(() => import('./pages/CommunitiesLayout'));
+const CreateCommunity = lazy(() => import('./pages/CreateCommunity'));
 
 import NotificationBell from './components/NotificationBell';
 import SearchBar from './components/SearchBar';
 import ScrollToTop from './components/ScrollToTop';
 import PostForm from './components/PostForm';
-import TrendingHashtags from './components/sidebar/TrendingHashtags';
-import SuggestedUsers from './components/sidebar/SuggestedUsers';
-import SuggestedCommunities from './components/sidebar/SuggestedCommunities';
 
-/* =========================
-   PROTECTED ROUTE
-========================= */
+// ✅ LAZY LOAD SIDEBAR COMPONENTS - Only load when needed
+const TrendingHashtags = lazy(() => import('./components/sidebar/TrendingHashtags'));
+const SuggestedUsers = lazy(() => import('./components/sidebar/SuggestedUsers'));
+const SuggestedCommunities = lazy(() => import('./components/sidebar/SuggestedCommunities'));
+
+/* LOADING SPINNER */
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+    </div>
+  );
+}
+
+/* PROTECTED ROUTE */
 function ProtectedRoute({ children }) {
   const { user, loading } = useContext(AuthContext);
 
@@ -68,9 +77,7 @@ function ProtectedRoute({ children }) {
   return user ? children : <Navigate to="/login" />;
 }
 
-/* =========================
-   LAYOUT
-========================= */
+/* LAYOUT */
 function Layout({ children }) {
   const { user, logout } = useContext(AuthContext);
   const { unreadMessageCount } = useSocket();
@@ -124,14 +131,13 @@ function Layout({ children }) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
 
-      {/* ================= NAVBAR ================= */}
+      {/* NAVBAR */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
 
             {/* Left: Brand + Mobile Menu */}
             <div className="flex items-center gap-3 sm:gap-4">
-              {/* Mobile Menu Button */}
               <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
                 className="lg:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
@@ -139,7 +145,6 @@ function Layout({ children }) {
                 {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
               </button>
 
-              {/* Brand - HobbySphere Logo */}
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-md">
                   H
@@ -157,7 +162,6 @@ function Layout({ children }) {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1 sm:gap-2">
-              {/* Desktop Navigation - ONLY CREATE POST BUTTON */}
               <div className="hidden lg:flex items-center gap-1">
                 <button
                   onClick={() => setShowCreatePost(true)}
@@ -168,7 +172,6 @@ function Layout({ children }) {
                 </button>
               </div>
 
-              {/* Home Icon */}
               <Link
                 to="/"
                 className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
@@ -177,7 +180,6 @@ function Layout({ children }) {
                 <HomeIcon size={20} />
               </Link>
 
-              {/* Communities Icon */}
               <Link
                 to="/communities"
                 className={`nav-link ${isActive('/communities') ? 'active' : ''}`}
@@ -186,10 +188,8 @@ function Layout({ children }) {
                 <Users size={20} />
               </Link>
 
-              {/* Notifications */}
               <NotificationBell />
 
-              {/* Messages */}
               <Link to="/messages" className="nav-link relative" title={t('nav.messages')}>
                 <MessageCircle size={20} />
                 {unreadMessageCount > 0 && (
@@ -199,12 +199,10 @@ function Layout({ children }) {
                 )}
               </Link>
 
-              {/* Profile */}
               <Link to={`/profile/${user?.username}`} className="nav-link" title={t('nav.profile')}>
                 <User size={20} />
               </Link>
 
-              {/* Dark Mode - Desktop Only */}
               <button
                 onClick={toggleTheme}
                 className="nav-link hidden lg:block"
@@ -213,7 +211,6 @@ function Layout({ children }) {
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              {/* Language Selector - Desktop */}
               <div className="relative hidden lg:block">
                 <button
                   onClick={() => setShowLangMenu(!showLangMenu)}
@@ -244,7 +241,6 @@ function Layout({ children }) {
                 )}
               </div>
 
-              {/* Logout */}
               <button
                 onClick={handleLogout}
                 className="nav-link text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -264,7 +260,7 @@ function Layout({ children }) {
         </div>
       </nav>
 
-      {/* ================= GUEST LOGOUT WARNING MODAL ================= */}
+      {/* GUEST LOGOUT WARNING MODAL */}
       {showGuestWarning && (
         <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 p-6">
@@ -295,7 +291,7 @@ function Layout({ children }) {
         </div>
       )}
 
-      {/* ================= MOBILE MENU ================= */}
+      {/* MOBILE MENU */}
       {showMobileMenu && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
@@ -305,22 +301,27 @@ function Layout({ children }) {
           <div className="absolute left-0 top-[57px] sm:top-[65px] bottom-0 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl animate-slide-in-left overflow-y-auto">
             <div className="flex flex-col p-4 space-y-2">
               
-              {/* Mobile Sidebar Components */}
+              {/* ✅ LAZY LOAD SIDEBAR COMPONENTS */}
               <div className="space-y-4 pb-2">
-                <div className="px-2">
-                  <TrendingHashtags />
-                </div>
-                <div className="px-2">
-                  <SuggestedUsers />
-                </div>
-                <div className="px-2">
-                  <SuggestedCommunities />
-                </div>
+                <Suspense fallback={<div className="h-20 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />}>
+                  <div className="px-2">
+                    <TrendingHashtags />
+                  </div>
+                </Suspense>
+                <Suspense fallback={<div className="h-20 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />}>
+                  <div className="px-2">
+                    <SuggestedUsers />
+                  </div>
+                </Suspense>
+                <Suspense fallback={<div className="h-20 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />}>
+                  <div className="px-2">
+                    <SuggestedCommunities />
+                  </div>
+                </Suspense>
               </div>
 
               <div className="divider" />
 
-              {/* Dark Mode Toggle */}
               <button
                 onClick={() => {
                   toggleTheme();
@@ -334,7 +335,6 @@ function Layout({ children }) {
 
               <div className="divider" />
 
-              {/* Language Selector */}
               <div className="px-4 py-2">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">{t('nav.changeLanguage')}</p>
                 <div className="space-y-1">
@@ -363,7 +363,7 @@ function Layout({ children }) {
         </div>
       )}
 
-      {/* ================= CREATE POST MODAL ================= */}
+      {/* CREATE POST MODAL */}
       {showCreatePost && (
         <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
@@ -388,12 +388,12 @@ function Layout({ children }) {
         </div>
       )}
 
-      {/* ================= MAIN CONTENT ================= */}
+      {/* MAIN CONTENT */}
       <main className="pt-[120px] sm:pt-24 lg:pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 lg:pb-8">
         {children}
       </main>
 
-      {/* ================= MOBILE FAB - ONLY CREATE POST ================= */}
+      {/* MOBILE FAB */}
       {showFab && (
         <div className="lg:hidden fixed bottom-6 right-6 z-40">
           <button
@@ -411,9 +411,7 @@ function Layout({ children }) {
   );
 }
 
-/* =========================
-   APP ROOT
-========================= */
+/* APP ROOT */
 export default function App() {
   return (
     <ThemeProvider>
@@ -437,16 +435,85 @@ export default function App() {
               <Route path="/reset-password/:token" element={<ResetPassword />} />
 
               <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
-              <Route path="/following" element={<ProtectedRoute><Layout><FollowingFeed /></Layout></ProtectedRoute>} />
-              <Route path="/profile/:username" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-              <Route path="/profile/:username/followers" element={<ProtectedRoute><Layout><FollowersList /></Layout></ProtectedRoute>} />
-              <Route path="/profile/:username/following" element={<ProtectedRoute><Layout><FollowingList /></Layout></ProtectedRoute>} />
-              <Route path="/hashtag/:tag" element={<ProtectedRoute><Layout><Hashtag /></Layout></ProtectedRoute>} />
               
-              <Route path="/communities/create" element={<ProtectedRoute><Layout><CreateCommunity /></Layout></ProtectedRoute>} />
-              <Route path="/communities/*" element={<ProtectedRoute><Layout><CommunitiesLayout /></Layout></ProtectedRoute>} />
+              {/* ✅ LAZY LOADED ROUTES */}
+              <Route path="/following" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <FollowingFeed />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
               
-              <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+              <Route path="/profile/:username" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <Profile />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/profile/:username/followers" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <FollowersList />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/profile/:username/following" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <FollowingList />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/hashtag/:tag" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <Hashtag />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/communities/create" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <CreateCommunity />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/communities/*" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <CommunitiesLayout />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/messages" element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Messages />
+                  </Suspense>
+                </ProtectedRoute>
+              } />
             </Routes>
           </BrowserRouter>
         </SocketProvider>

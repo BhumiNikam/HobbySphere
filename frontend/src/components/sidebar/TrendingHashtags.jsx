@@ -29,7 +29,8 @@ export default function TrendingHashtags() {
   const fetchTrending = async () => {
     try {
       const res = await API.get('/search/trending');
-      setTags(res.data || []);
+      const data = res.data || [];
+      setTags(data);
     } catch {
       setTags([]);
     }
@@ -65,7 +66,6 @@ export default function TrendingHashtags() {
           {tags.map((tag, index) => {
             if (!tag?._id) return null;
 
-            // ✅ FIX: Remove the # if backend already includes it
             const displayTag = tag._id.startsWith('#') ? tag._id.substring(1) : tag._id;
 
             return (

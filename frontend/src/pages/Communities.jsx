@@ -1,16 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import API from '../services/api';
+import API, { clearCache } from '../services/api';
 import toast from 'react-hot-toast';
 import { Check } from 'lucide-react';
-
-// ✅ Cache for communities list
-const communitiesCache = {
-  data: null,
-  timestamp: 0,
-  params: {}
-};
 
 export default function Communities() {
   const navigate = useNavigate();
@@ -36,28 +29,9 @@ export default function Communities() {
       if (search) params.search = search;
       if (category) params.category = category;
 
-      // ✅ Check cache
-      const cacheKey = JSON.stringify(params);
-      const now = Date.now();
-      
-      if (
-        communitiesCache.data &&
-        JSON.stringify(communitiesCache.params) === cacheKey &&
-        now - communitiesCache.timestamp < 120000
-      ) {
-        separateCommunities(communitiesCache.data);
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       const res = await API.get('/communities', { params });
       const data = res.data.communities || [];
-      
-      // ✅ Update cache
-      communitiesCache.data = data;
-      communitiesCache.timestamp = now;
-      communitiesCache.params = params;
       
       separateCommunities(data);
     } catch (error) {
@@ -69,7 +43,6 @@ export default function Communities() {
     }
   };
 
-  // ✅ Separate joined and not-joined communities
   const separateCommunities = (allCommunities) => {
     const userCommunities = user?.communities || [];
     const userCommunityIds = userCommunities.map(c => typeof c === 'string' ? c : c._id);
@@ -97,7 +70,6 @@ export default function Communities() {
         await API.post(`/communities/${communityId}/leave`);
         toast.success('Left community');
         
-        // Move from joined to not-joined
         const community = joinedCommunities.find(c => c._id === communityId);
         setJoinedCommunities(joinedCommunities.filter(c => c._id !== communityId));
         if (community) setCommunities([community, ...communities]);
@@ -105,14 +77,13 @@ export default function Communities() {
         await API.post(`/communities/${communityId}/join`);
         toast.success('Joined community!');
         
-        // Move from not-joined to joined
         const community = communities.find(c => c._id === communityId);
         setCommunities(communities.filter(c => c._id !== communityId));
         if (community) setJoinedCommunities([...joinedCommunities, community]);
       }
       
-      // Clear cache
-      communitiesCache.data = null;
+      // ✅ Clear cache
+      clearCache('/communities');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update membership');
     } finally {
@@ -135,7 +106,6 @@ export default function Communities() {
 
   const CommunityCard = ({ community, isJoined }) => (
     <div className="card-modern-hover group overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all">
-      {/* COVER */}
       <div
         className="h-36 relative bg-gradient-to-br from-indigo-500 to-purple-600 cursor-pointer"
         style={{
@@ -147,7 +117,6 @@ export default function Communities() {
       >
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
         
-        {/* ✅ Joined Badge */}
         {isJoined && (
           <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
             <Check size={14} />
@@ -156,7 +125,6 @@ export default function Communities() {
         )}
       </div>
 
-      {/* BODY */}
       <div className="p-5">
         <h3 
           className="text-lg font-bold mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition cursor-pointer text-slate-900 dark:text-slate-100 line-clamp-1"
@@ -179,7 +147,6 @@ export default function Communities() {
         </div>
 
         <div className="flex gap-2">
-          {/* ✅ Join/Leave Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -195,7 +162,6 @@ export default function Communities() {
             {joiningId === community._id ? 'Loading...' : isJoined ? 'Leave' : 'Join'}
           </button>
 
-          {/* View Button */}
           <button
             onClick={() => navigate(`/communities/${community._id}`)}
             className="px-4 py-2 rounded-lg font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition text-sm"
@@ -210,7 +176,6 @@ export default function Communities() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
 
-      {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
         <div>
           <h1 className="text-3xl font-bold gradient-text">
@@ -226,7 +191,6 @@ export default function Communities() {
         </Link>
       </div>
 
-      {/* SEARCH & FILTER */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-10 flex flex-col md:flex-row gap-4">
         <input
           type="text"
@@ -250,7 +214,6 @@ export default function Communities() {
         </select>
       </div>
 
-      {/* CONTENT */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
@@ -271,7 +234,6 @@ export default function Communities() {
         </div>
       ) : (
         <div className="space-y-10">
-          {/* ✅ JOINED COMMUNITIES */}
           {joinedCommunities.length > 0 && (
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
@@ -286,7 +248,6 @@ export default function Communities() {
             </div>
           )}
 
-          {/* ✅ OTHER COMMUNITIES */}
           {communities.length > 0 && (
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6">

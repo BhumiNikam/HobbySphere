@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CommentSection from './CommentSection';
@@ -13,7 +13,8 @@ import {
 import API from '../services/api';
 import { useSocket } from '../context/SocketContext';
 
-export default function PostCard({ post, currentUser, onDelete, isSeen }) {
+// ✅ Memoize to prevent unnecessary re-renders
+const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
   const navigate = useNavigate();
   const { socket } = useSocket();
   const { t } = useTranslation();
@@ -23,13 +24,13 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
 
   const userId = currentUser?.id || currentUser?._id;
 
-  const hasUserLiked = (likes = []) =>
+  const hasUserLiked = useCallback((likes = []) =>
     likes.some((like) => {
       if (!like) return false;
       if (typeof like === 'string') return like === userId;
       if (like._id) return like._id.toString() === userId;
       return like.toString?.() === userId;
-    });
+    }), [userId]);
 
   const [likes, setLikes] = useState(post.likes?.length || 0);
   const [isLiked, setIsLiked] = useState(() => hasUserLiked(post.likes));
@@ -73,14 +74,17 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
     };
   }, [socket, post._id, userId]);
 
+  // ✅ Only check bookmarks when comment section is opened (lazy load)
   useEffect(() => {
+    if (!showComments) return;
+    
     (async () => {
       try {
         const res = await API.get('/bookmarks');
         setIsBookmarked(res.data.some((b) => b?._id === post._id));
       } catch {}
     })();
-  }, [post._id]);
+  }, [post._id, showComments]);
 
   useEffect(() => {
     const closeMenu = (e) => {
@@ -92,41 +96,53 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
     return () => document.removeEventListener('mousedown', closeMenu);
   }, []);
 
-  const handleLike = async () => {
+  const handleLike = useCallback(async () => {
     try {
+      // ✅ Optimistic update
+      const newIsLiked = !isLiked;
+      setIsLiked(newIsLiked);
+      setLikes(prev => newIsLiked ? prev + 1 : prev - 1);
+      
       const res = await API.post(`/posts/${post._id}/like`);
+      
+      // Sync with server response
       setLikes(res.data.likes.length);
       setIsLiked(res.data.isLiked);
     } catch (err) {
+      // Revert on error
+      setIsLiked(!isLiked);
+      setLikes(prev => isLiked ? prev + 1 : prev - 1);
       console.error('Like failed:', err);
     }
-  };
+  }, [post._id, isLiked]);
 
-  const handleMediaDoubleClick = async () => {
+  const handleMediaDoubleClick = useCallback(async () => {
     if (isLiked) return;
 
     setLikeBurst(true);
+    setIsLiked(true);
+    setLikes(prev => prev + 1);
 
     try {
-      const res = await API.post(`/posts/${post._id}/like`);
-      setLikes(res.data.likes.length);
-      setIsLiked(res.data.isLiked);
+      await API.post(`/posts/${post._id}/like`);
     } catch (err) {
+      setIsLiked(false);
+      setLikes(prev => prev - 1);
       console.error('Double-click like failed:', err);
     }
     
     setTimeout(() => setLikeBurst(false), 600);
-  };
+  }, [post._id, isLiked]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!window.confirm(t('post.delete') + '?')) return;
     try {
       await API.delete(`/posts/${post._id}`);
       onDelete?.(post._id);
     } catch {}
-  };
+  }, [post._id, onDelete, t]);
 
-  const renderContent = (text) =>
+  const renderContent = useCallback((text) =>
     text.split(/(#\w+)/g).map((part, i) => {
       if (part.startsWith('#')) {
         const tag = part.substring(1);
@@ -141,9 +157,8 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
         );
       }
       return <span key={i}>{part}</span>;
-    });
+    }), [navigate]);
 
-  // ✅ FIX: Check if current user is the post author
   const isPostAuthor = post.author._id?.toString() === userId || post.author._id === userId;
 
   return (
@@ -183,7 +198,6 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
           </div>
         </div>
 
-        {/* ✅ FIX: Show delete menu only for post author */}
         {isPostAuthor && (
           <div className="relative flex-shrink-0" ref={menuRef}>
             <button
@@ -329,4 +343,8 @@ export default function PostCard({ post, currentUser, onDelete, isSeen }) {
       )}
     </article>
   );
-}
+});
+
+PostCard.displayName = 'PostCard';
+
+export default PostCard;

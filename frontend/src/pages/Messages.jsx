@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import api, { clearCache } from '../services/api';
 import ChatList from '../components/ChatList';
 import ChatWindow from '../components/ChatWindow';
 import { useSocket } from '../context/SocketContext';
@@ -34,7 +34,7 @@ export default function Messages() {
     try {
       setLoading(true);
       
-      // Fetch both conversations and following users
+      // ✅ PARALLEL API CALLS
       const [conversationsRes, followingRes] = await Promise.all([
         api.get('/messages/conversations'),
         api.get('/auth/me')
@@ -42,25 +42,15 @@ export default function Messages() {
 
       setConversations(conversationsRes.data);
       
-      // Get following users and filter out those already in conversations
       const currentUserId = followingRes.data.user._id || followingRes.data.user.id;
       const following = followingRes.data.user.following || [];
       const conversationUserIds = conversationsRes.data.map(conv => 
         conv.participants.find(p => p._id !== currentUserId)?._id
       ).filter(Boolean);
       
-      // Only show following users who don't have active conversations
       const followingWithoutConversations = following.filter(
         user => !conversationUserIds.includes(user._id)
       );
-      
-      console.log('Debug Messages:', {
-        currentUserId,
-        totalFollowing: following.length,
-        conversationUserIds,
-        followingWithoutConversations: followingWithoutConversations.length,
-        followingData: followingWithoutConversations
-      });
       
       setFollowingUsers(followingWithoutConversations);
     } catch (error) {
@@ -75,7 +65,6 @@ export default function Messages() {
       const { data } = await api.get(`/messages/conversations/${userId}`);
       setSelectedConversation(data);
 
-      // Move to conversations list and remove from following list
       setConversations(prev => {
         const exists = prev.some(c => c._id === data._id);
         return exists ? prev : [data, ...prev];
@@ -84,6 +73,8 @@ export default function Messages() {
       setFollowingUsers(prev => 
         prev.filter(user => user._id !== userId)
       );
+      
+      clearCache('/messages/conversations');
     } catch (error) {
       console.error('Error opening conversation:', error);
     }
@@ -94,7 +85,6 @@ export default function Messages() {
   };
 
   const handleSelectFollowingUser = async (user) => {
-    // Open conversation with this user
     await openConversationWithUser(user._id);
   };
 
@@ -125,7 +115,6 @@ export default function Messages() {
           : conv
       );
       
-      // Sort by most recent message
       return updatedConversations.sort((a, b) => 
         new Date(b.updatedAt) - new Date(a.updatedAt)
       );
@@ -145,7 +134,6 @@ export default function Messages() {
   return (
     <div className="h-screen w-screen flex bg-slate-50 dark:bg-slate-950 overflow-hidden relative">
       
-      {/* Desktop Close Button */}
       <button
         onClick={() => navigate(-1)}
         className="hidden md:block absolute top-4 right-4 z-20 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-2 rounded-xl shadow-md dark:shadow-xl dark:shadow-black/20 transition-all border border-slate-200 dark:border-slate-800 hover:scale-105"
@@ -154,7 +142,6 @@ export default function Messages() {
         <X size={20} />
       </button>
 
-      {/* Mobile Back Button (when chat is open) */}
       {selectedConversation && (
         <button
           onClick={() => navigate(-1)}
@@ -165,14 +152,12 @@ export default function Messages() {
         </button>
       )}
 
-      {/* ================= SIDEBAR ================= */}
       <aside
         className={`
           w-full md:w-80 lg:w-96 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col
           ${selectedConversation ? 'hidden md:flex' : 'flex'}
         `}
       >
-        {/* Header */}
         <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="flex items-center justify-between mb-1">
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Messages</h1>
@@ -194,7 +179,6 @@ export default function Messages() {
           </p>
         </div>
 
-        {/* Chat List */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           {totalItems === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
@@ -210,7 +194,6 @@ export default function Messages() {
             </div>
           ) : (
             <div>
-              {/* Active Conversations */}
               {conversations.length > 0 && (
                 <ChatList
                   conversations={conversations}
@@ -219,7 +202,6 @@ export default function Messages() {
                 />
               )}
 
-              {/* Following Users (without conversations) */}
               {followingUsers.length > 0 && (
                 <div>
                   <div className="px-4 py-3 bg-slate-100 dark:bg-slate-800 border-y border-slate-200 dark:border-slate-700 sticky top-0 z-10">
@@ -237,7 +219,6 @@ export default function Messages() {
                         onClick={() => handleSelectFollowingUser(user)}
                         className="w-full px-4 py-4 flex items-start gap-3 text-left transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800 bg-white dark:bg-slate-900"
                       >
-                        {/* Avatar */}
                         <img
                           src={
                             user.profileImage ||
@@ -247,7 +228,6 @@ export default function Messages() {
                           className="w-11 h-11 rounded-full object-cover flex-shrink-0"
                         />
 
-                        {/* Content */}
                         <div className="flex-1 min-w-0">
                           <p className="truncate font-semibold text-slate-900 dark:text-slate-100">
                             {user.fullName}
@@ -271,7 +251,6 @@ export default function Messages() {
         </div>
       </aside>
 
-      {/* ================= CHAT WINDOW ================= */}
       <section
         className={`
           flex-1 flex flex-col bg-white dark:bg-slate-900

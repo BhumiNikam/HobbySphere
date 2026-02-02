@@ -1,15 +1,15 @@
-import { useEffect, useState, useContext, useRef } from 'react';
+import { useEffect, useState, useContext, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTranslation } from 'react-i18next';
 import PostCard from '../components/PostCard';
-import API from '../services/api';
+import API, { clearCache } from '../services/api';
 import PostSkeleton from '../components/ui/PostSkeleton';
 import RightSidebar from '../components/sidebar/RightSidebar';
 
 const SEEN_POSTS_KEY = 'hobbysphere_seen_home_posts';
-const LIMIT = 5;
+const LIMIT = 15; // ✅ Load more posts per request
 
 function FeedSkeleton() {
   return (
@@ -44,40 +44,39 @@ export default function Home() {
 
   const seenObserverRef = useRef(null);
   const loadMoreRef = useRef(null);
+  const loadingRef = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem(
-      SEEN_POSTS_KEY,
-      JSON.stringify(Array.from(seenPosts))
-    );
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem(
+        SEEN_POSTS_KEY,
+        JSON.stringify(Array.from(seenPosts))
+      );
+    }, 1000);
+    return () => clearTimeout(timeoutId);
   }, [seenPosts]);
 
   useEffect(() => {
     loadFeed(1);
   }, []);
 
-  const loadFeed = async (pageNum) => {
+  const loadFeed = useCallback(async (pageNum) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
     try {
-      if (pageNum === 1) {
-        // Keep posts as null for initial skeleton
-      } else {
+      if (pageNum !== 1) {
         setLoadingMore(true);
       }
 
-      const res = await API.get(
-        `/posts?page=${pageNum}&limit=${LIMIT}`
-      );
+      const res = await API.get(`/posts?page=${pageNum}&limit=${LIMIT}`);
 
-      const newPosts = Array.isArray(res.data?.posts)
-        ? res.data.posts
-        : [];
-
+      const newPosts = Array.isArray(res.data?.posts) ? res.data.posts : [];
       const more = Boolean(res.data?.hasMore);
 
-      setPosts((prev) =>
-        pageNum === 1 ? newPosts : [...(prev || []), ...newPosts]
-      );
+      const updatedPosts = pageNum === 1 ? newPosts : [...(posts || []), ...newPosts];
 
+      setPosts(updatedPosts);
       setHasMore(more);
       setPage(pageNum);
     } catch (err) {
@@ -85,8 +84,9 @@ export default function Home() {
       setPosts([]);
     } finally {
       setLoadingMore(false);
+      loadingRef.current = false;
     }
-  };
+  }, [posts]);
 
   useEffect(() => {
     if (!socket) return;
@@ -107,29 +107,31 @@ export default function Home() {
     const onPostCreated = (e) => {
       setPosts((prev) => [e.detail, ...(prev || [])]);
       setHasNewPosts(false);
+      clearCache('/posts');
     };
 
     window.addEventListener('post-created', onPostCreated);
-    return () =>
-      window.removeEventListener('post-created', onPostCreated);
+    return () => window.removeEventListener('post-created', onPostCreated);
   }, []);
 
   const handleRefresh = async () => {
     setSeenPosts(new Set());
     localStorage.removeItem(SEEN_POSTS_KEY);
+    clearCache('/posts');
     await loadFeed(1);
     setHasNewPosts(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePostDeleted = (postId) => {
+  const handlePostDeleted = useCallback((postId) => {
     setPosts((prev) => (prev || []).filter((p) => p._id !== postId));
     setSeenPosts((prev) => {
       const updated = new Set(prev);
       updated.delete(postId);
       return updated;
     });
-  };
+    clearCache('/posts');
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -137,27 +139,28 @@ export default function Home() {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
           const id = entry.target.dataset.postid;
-          setSeenPosts((prev) =>
-            prev.has(id) ? prev : new Set([...prev, id])
-          );
+          setSeenPosts((prev) => {
+            if (prev.has(id)) return prev;
+            return new Set([...prev, id]);
+          });
           observer.unobserve(entry.target);
         });
       },
-      { threshold: 0.6 }
+      { threshold: 0.6, rootMargin: '50px' }
     );
 
     seenObserverRef.current = observer;
     return () => observer.disconnect();
   }, []);
 
-  const observePost = (el) => {
+  const observePost = useCallback((el) => {
     if (el && seenObserverRef.current) {
       seenObserverRef.current.observe(el);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (!hasMore || loadingMore || !posts) return;
+    if (!hasMore || loadingMore || !posts || loadingRef.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -165,7 +168,7 @@ export default function Home() {
           loadFeed(page + 1);
         }
       },
-      { threshold: 1 }
+      { threshold: 1, rootMargin: '400px' } // ✅ Load earlier
     );
 
     if (loadMoreRef.current) {
@@ -173,17 +176,13 @@ export default function Home() {
     }
 
     return () => observer.disconnect();
-  }, [page, hasMore, loadingMore, posts]);
+  }, [page, hasMore, loadingMore, posts, loadFeed]);
 
-  const firstUnseenIndex = posts?.findIndex(
-    (p) => !seenPosts.has(p._id)
-  ) ?? -1;
+  const firstUnseenIndex = posts?.findIndex((p) => !seenPosts.has(p._id)) ?? -1;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
-      {/* Main content column */}
       <div className="w-full space-y-6 py-6 min-w-0">
-        {/* ✅ MOBILE ONLY: Tab switcher */}
         <div className="lg:hidden sticky top-[120px] sm:top-24 z-30 bg-slate-50 dark:bg-slate-950 -mx-4 px-4 pb-4">
           <div className="flex gap-2 bg-white dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
             <button
@@ -233,22 +232,17 @@ export default function Home() {
                 key={post._id}
                 ref={observePost}
                 data-postid={post._id}
-                className={
-                  !seenPosts.has(post._id)
-                    ? 'animate-fade-in-up'
-                    : ''
-                }
+                className={!seenPosts.has(post._id) ? 'animate-fade-in-up' : ''}
               >
-                {index === firstUnseenIndex &&
-                  firstUnseenIndex !== -1 && (
-                    <div className="flex items-center my-8">
-                      <div className="flex-grow border-t border-slate-200 dark:border-slate-700" />
-                      <span className="mx-4 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                        New posts
-                      </span>
-                      <div className="flex-grow border-t border-slate-200 dark:border-slate-700" />
-                    </div>
-                  )}
+                {index === firstUnseenIndex && firstUnseenIndex !== -1 && (
+                  <div className="flex items-center my-8">
+                    <div className="flex-grow border-t border-slate-200 dark:border-slate-700" />
+                    <span className="mx-4 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                      New posts
+                    </span>
+                    <div className="flex-grow border-t border-slate-200 dark:border-slate-700" />
+                  </div>
+                )}
 
                 <PostCard
                   post={post}
@@ -268,7 +262,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Sidebar column */}
       <aside className="hidden lg:block">
         <RightSidebar />
       </aside>

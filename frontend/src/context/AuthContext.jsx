@@ -9,7 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Function to refresh user data from server
   const refreshUser = async () => {
     try {
       const res = await API.get('/auth/me');
@@ -28,12 +27,20 @@ export const AuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('user');
     
     if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
+      // ✅ INSTANT load from localStorage
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Failed to parse stored user:', e);
+      }
       setLoading(false);
       
-      // Silently refresh user data in background
-      refreshUser();
+      // ✅ SILENT background refresh (don't block UI)
+      refreshUser().catch(() => {
+        // If refresh fails, keep cached user
+      });
     } else if (token) {
+      // No cached user, must fetch
       API.get('/auth/me')
         .then(res => {
           setUser(res.data.user);
@@ -65,7 +72,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Call backend to cleanup guest data if guest user
       await API.post('/auth/logout');
     } catch (error) {
       console.error('Logout cleanup failed:', error);
@@ -77,7 +83,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Update user in context and localStorage
   const updateUser = (updatedUserData) => {
     const newUser = { ...user, ...updatedUserData };
     setUser(newUser);

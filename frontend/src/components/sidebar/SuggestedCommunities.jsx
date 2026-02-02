@@ -4,6 +4,12 @@ import API from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+// ✅ Cache for community suggestions
+const communitiesCache = {
+  data: null,
+  timestamp: 0
+};
+
 function CommunitiesSkeleton() {
   return (
     <div className="space-y-3">
@@ -29,8 +35,21 @@ export default function SuggestedCommunities() {
 
   const fetchSuggestions = async () => {
     try {
+      // ✅ Check cache (3 minutes)
+      const now = Date.now();
+      if (communitiesCache.data && now - communitiesCache.timestamp < 180000) {
+        setCommunities(communitiesCache.data);
+        return;
+      }
+
       const res = await API.get('/communities/suggestions');
-      setCommunities(res.data || []);
+      const data = res.data || [];
+      
+      // ✅ Update cache
+      communitiesCache.data = data;
+      communitiesCache.timestamp = now;
+      
+      setCommunities(data);
     } catch {
       setCommunities([]);
     }
@@ -42,7 +61,11 @@ export default function SuggestedCommunities() {
     try {
       setJoiningId(communityId);
       await API.post(`/communities/${communityId}/join`);
+      
+      // Remove from list and clear cache
       setCommunities((prev) => prev.filter((c) => c._id !== communityId));
+      communitiesCache.data = null;
+      
       navigate(`/communities/${communityId}`);
     } catch {
       console.error('Join community failed');

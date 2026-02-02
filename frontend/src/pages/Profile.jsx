@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import ImageUploadModal from '../components/ImageUploadModal';
 import PostCard from '../components/PostCard';
-import API from '../services/api';
+import API, { clearCache } from '../services/api';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -34,26 +34,28 @@ export default function Profile() {
 
   useEffect(() => {
     loadProfile();
-  }, [username, currentUser]);
+  }, [username]);
 
   const loadProfile = async () => {
     try {
       setLoading(true);
+
+      // ✅ PARALLEL API CALLS
       const [profileRes, postsRes] = await Promise.all([
         API.get(`/users/${username}`),
-        API.get(`/users/${username}/posts`),
+        API.get(`/users/${username}/posts?limit=20`), // Load more initially
       ]);
 
       const data = profileRes.data;
+      const postsData = postsRes.data?.posts || postsRes.data || [];
+
       setProfile(data);
-      setPosts(postsRes.data || []);
+      setPosts(postsData);
       setFollowerCount(data.followers?.length || 0);
 
-      // Fixed comparison - check if currentUser._id exists in followers array
       if (currentUser?._id && data.followers) {
         const isUserFollowing = data.followers.some(
           (follower) => {
-            // Handle both populated and non-populated followers
             const followerId = typeof follower === 'object' ? follower._id : follower;
             return followerId.toString() === currentUser._id.toString();
           }
@@ -75,7 +77,9 @@ export default function Profile() {
       setIsFollowing(res.data.isFollowing);
       setFollowerCount((c) => (res.data.isFollowing ? c + 1 : c - 1));
       
-      // Refresh current user data to update following list
+      // ✅ Clear relevant caches
+      clearCache(`/users/${username}`);
+      
       if (refreshUser) {
         await refreshUser();
       }
@@ -86,10 +90,23 @@ export default function Profile() {
     }
   };
 
+  const isOwnProfile = useMemo(() => 
+    currentUser?.username === profile?.username,
+    [currentUser?.username, profile?.username]
+  );
+
+  const joinDate = useMemo(() => {
+    if (!profile?.createdAt) return '';
+    return new Date(profile.createdAt).toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [profile?.createdAt]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 sm:py-24">
-        <div className="spinner" />
+        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -105,8 +122,6 @@ export default function Profile() {
       </div>
     );
   }
-
-  const isOwnProfile = currentUser?.username === profile.username;
 
   return (
     <div className="w-full pb-8 sm:pb-12 animate-fade-in max-w-4xl mx-auto">
@@ -236,11 +251,7 @@ export default function Profile() {
               <span className="flex items-center gap-1.5">
                 <Calendar size={14} className="sm:w-4 sm:h-4 text-slate-400 dark:text-slate-500 flex-shrink-0" /> 
                 <span className="truncate">
-                  {t('profile.joinedOn')}{' '}
-                  {new Date(profile.createdAt).toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                  {t('profile.joinedOn')} {joinDate}
                 </span>
               </span>
             </div>
@@ -281,7 +292,15 @@ export default function Profile() {
         ) : (
           <div className="w-full space-y-4 sm:space-y-6">
             {posts.map((post) => (
-              <PostCard key={post._id} post={post} currentUser={currentUser} />
+              <PostCard 
+                key={post._id} 
+                post={post} 
+                currentUser={currentUser}
+                onDelete={(postId) => {
+                  setPosts(posts.filter(p => p._id !== postId));
+                  clearCache(`/users/${username}`);
+                }}
+              />
             ))}
           </div>
         )}
@@ -302,6 +321,7 @@ export default function Profile() {
                 ? { profileImage: url }
                 : { coverImage: url }),
             }));
+            clearCache(`/users/${username}`);
             setShowImageModal(false);
           }}
         />
@@ -313,6 +333,7 @@ export default function Profile() {
           onClose={() => setShowEditModal(false)}
           onUpdate={(p) => {
             setProfile(p);
+            clearCache(`/users/${username}`);
             setShowEditModal(false);
           }}
         />
@@ -354,6 +375,7 @@ function EditProfileModal({ profile, onClose, onUpdate }) {
     try {
       setLoading(true);
       const res = await API.put('/users/profile', formData);
+      clearCache('/users/'); // Clear all user caches
       toast.success(t('common.success'));
       onUpdate(res.data);
     } catch {

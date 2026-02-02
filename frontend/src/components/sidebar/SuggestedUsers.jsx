@@ -4,6 +4,12 @@ import { UserPlus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+// ✅ Cache for user suggestions
+const usersCache = {
+  data: null,
+  timestamp: 0
+};
+
 function UsersSkeleton() {
   return (
     <div className="space-y-3">
@@ -29,8 +35,21 @@ export default function SuggestedUsers() {
 
   const fetchSuggestions = async () => {
     try {
+      // ✅ Check cache (2 minutes)
+      const now = Date.now();
+      if (usersCache.data && now - usersCache.timestamp < 120000) {
+        setUsers(usersCache.data);
+        return;
+      }
+
       const res = await API.get('/users/suggestions');
-      setUsers(res.data || []);
+      const data = res.data || [];
+      
+      // ✅ Update cache
+      usersCache.data = data;
+      usersCache.timestamp = now;
+      
+      setUsers(data);
     } catch {
       setUsers([]);
     }
@@ -42,7 +61,10 @@ export default function SuggestedUsers() {
     try {
       setFollowingId(userId);
       await API.post(`/users/${userId}/follow`);
+      
+      // Remove from list and clear cache
       setUsers((prev) => prev.filter((u) => u._id !== userId));
+      usersCache.data = null;
     } catch {
       console.error('Follow failed');
     } finally {
