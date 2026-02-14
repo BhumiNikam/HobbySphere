@@ -782,10 +782,17 @@ a.link-animated:hover::after {
   border: 2px solid rgba(226, 232, 240, 0.8);
   border-radius: 0.75rem;
   background: linear-gradient(to bottom, rgba(248, 250, 252, 0.5), white);
+  color: #0f172a;
   font-size: 0.9375rem;
   transition: all 0.3s ease;
   outline: none;
   line-height: 1.6;
+}
+
+.dark .input-modern {
+  border: 2px solid rgba(51, 65, 85, 0.8);
+  background: linear-gradient(to bottom, rgba(30, 41, 59, 0.5), #1e293b);
+  color: #f1f5f9;
 }
 
 .input-modern:focus {
@@ -794,8 +801,17 @@ a.link-animated:hover::after {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
+.dark .input-modern:focus {
+  background: #1e293b;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
 .input-modern::placeholder {
   color: #94a3b8;
+}
+
+.dark .input-modern::placeholder {
+  color: #64748b;
 }
 
 .btn-ghost {

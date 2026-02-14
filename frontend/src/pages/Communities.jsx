@@ -217,13 +217,13 @@ export default function Communities() {
           placeholder="Search communities..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 input-modern"
+          className="flex-1 input-modern bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
         />
 
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="input-modern md:max-w-xs bg-white dark:bg-slate-800"
+          className="input-modern md:max-w-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
         >
           <option value="">All Categories</option>
           {categories.map((cat) => (
