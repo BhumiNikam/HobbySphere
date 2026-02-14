@@ -7,7 +7,7 @@ import { Check, Users } from 'lucide-react';
 
 export default function Communities() {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, refreshUser } = useContext(AuthContext);
   const [communities, setCommunities] = useState([]);
   const [joinedCommunities, setJoinedCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ export default function Communities() {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [search, category]);
+  }, [search, category, user]);
 
   const fetchCommunities = async () => {
     try {
@@ -83,6 +83,7 @@ export default function Communities() {
       }
       
       clearCache('/communities');
+      await refreshUser();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update membership');
     } finally {

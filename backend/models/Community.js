@@ -21,13 +21,11 @@ const communitySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-// ✅ CRITICAL INDEXES FOR PERFORMANCE
-communitySchema.index({ slug: 1 });
+// ✅ INDEXES - slug index removed (already created by unique: true)
 communitySchema.index({ category: 1, memberCount: -1 });
 communitySchema.index({ memberCount: -1, createdAt: -1 });
-communitySchema.index({ members: 1 }); // ✅ Fast member lookup
+communitySchema.index({ members: 1 });
 communitySchema.index({ privacy: 1, memberCount: -1 });
-communitySchema.index({ creator: 1 });
 communitySchema.index({ postCount: -1, createdAt: -1 });
 
 // Text search index
