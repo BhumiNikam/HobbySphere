@@ -422,6 +422,10 @@ export default function App() {
           <BrowserRouter>
             <Toaster 
               position="top-right" 
+              containerStyle={{
+                top: '80px',
+                zIndex: 40,
+              }}
               toastOptions={{
                 className: 'dark:bg-slate-800 dark:text-slate-100',
                 style: {
