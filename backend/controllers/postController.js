@@ -253,9 +253,11 @@ exports.deletePost = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // Delete all media from cloudinary
+    // Delete all media from cloudinary (support both old and new schema)
+    const mediaToDelete = post.media?.length ? post.media : post.images || [];
+    
     await Promise.all(
-      post.media.map((item) =>
+      mediaToDelete.map((item) =>
         cloudinary.uploader.destroy(item.publicId, {
           resource_type: ['image', 'video'].includes(item.type) ? item.type : 'raw'
         }).catch(() => {})
@@ -274,7 +276,7 @@ exports.deletePost = async (req, res) => {
 };
 
 /* =====================================================
-   DOWNLOAD POST MEDIA
+   DOWNLOAD POST MEDIA - SUPPORTS BOTH OLD AND NEW SCHEMA
 ===================================================== */
 exports.downloadMedia = async (req, res) => {
   try {
@@ -285,7 +287,10 @@ exports.downloadMedia = async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    const mediaItem = post.media[parseInt(mediaIndex)];
+    // ✅ Support both old 'images' and new 'media' fields
+    const mediaArray = post.media?.length ? post.media : post.images || [];
+    const mediaItem = mediaArray[parseInt(mediaIndex)];
+    
     if (!mediaItem) {
       return res.status(404).json({ message: 'Media not found' });
     }
@@ -293,8 +298,8 @@ exports.downloadMedia = async (req, res) => {
     // Return download URL
     res.json({
       url: mediaItem.url,
-      fileName: mediaItem.fileName || `download.${mediaItem.type}`,
-      type: mediaItem.type
+      fileName: mediaItem.fileName || `download-${Date.now()}.${mediaItem.type || 'jpg'}`,
+      type: mediaItem.type || 'image'
     });
   } catch (error) {
     console.error('Download error:', error);
