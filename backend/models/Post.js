@@ -4,6 +4,8 @@ const postSchema = new mongoose.Schema({
   content: { type: String, required: true, maxlength: 2000 },
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', index: true },
+  
+  // ✅ NEW: Multi-media support
   media: [{
     url: String,
     publicId: String,
@@ -16,6 +18,18 @@ const postSchema = new mongoose.Schema({
     fileSize: Number,
     mimeType: String
   }],
+  
+  // ✅ DEPRECATED: Keep for backward compatibility with old posts
+  images: [{
+    url: String,
+    publicId: String,
+    type: { 
+      type: String, 
+      enum: ['image', 'video'],
+      default: 'image' 
+    }
+  }],
+  
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   commentCount: { type: Number, default: 0 },
   hashtags: [String],

@@ -276,24 +276,48 @@ exports.deletePost = async (req, res) => {
 };
 
 /* =====================================================
-   DOWNLOAD POST MEDIA - SUPPORTS BOTH OLD AND NEW SCHEMA
+   DOWNLOAD POST MEDIA - ENHANCED WITH BETTER ERROR HANDLING
 ===================================================== */
 exports.downloadMedia = async (req, res) => {
   try {
     const { postId, mediaIndex } = req.params;
     
+    console.log('📥 Download request:', { postId, mediaIndex }); // Debug log
+    
     const post = await Post.findById(postId);
     if (!post) {
+      console.error('❌ Post not found:', postId);
       return res.status(404).json({ message: 'Post not found' });
     }
 
+    console.log('✅ Post found:', {
+      hasMedia: !!post.media,
+      mediaLength: post.media?.length,
+      hasImages: !!post.images,
+      imagesLength: post.images?.length
+    }); // Debug log
+
     // ✅ Support both old 'images' and new 'media' fields
     const mediaArray = post.media?.length ? post.media : post.images || [];
-    const mediaItem = mediaArray[parseInt(mediaIndex)];
+    
+    if (!mediaArray.length) {
+      console.error('❌ No media found in post:', postId);
+      return res.status(404).json({ message: 'No media found in this post' });
+    }
+
+    const index = parseInt(mediaIndex);
+    const mediaItem = mediaArray[index];
     
     if (!mediaItem) {
-      return res.status(404).json({ message: 'Media not found' });
+      console.error('❌ Media item not found at index:', index);
+      return res.status(404).json({ message: 'Media not found at specified index' });
     }
+
+    console.log('✅ Media item found:', {
+      type: mediaItem.type,
+      fileName: mediaItem.fileName,
+      url: mediaItem.url?.substring(0, 50) + '...'
+    }); // Debug log
 
     // Return download URL
     res.json({
@@ -302,7 +326,7 @@ exports.downloadMedia = async (req, res) => {
       type: mediaItem.type || 'image'
     });
   } catch (error) {
-    console.error('Download error:', error);
+    console.error('❌ Download error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
