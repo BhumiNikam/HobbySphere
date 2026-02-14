@@ -25,16 +25,18 @@ exports.addComment = async (req, res) => {
       post: postId,
     });
 
-    // Increment comment count safely
-    await Post.findByIdAndUpdate(postId, {
-      $inc: { commentCount: 1 },
-    });
+    // Increment comment count
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { $inc: { commentCount: 1 } },
+      { new: true }
+    );
 
     const populatedComment = await Comment.findById(comment._id)
       .populate('author', 'username fullName profileImage')
       .lean();
 
-    /* ===== SOCKET ===== */
+    /* ===== REAL-TIME UPDATE ===== */
     const io = req.app.get('io');
     const userSockets = req.app.get('userSockets');
 
@@ -42,6 +44,7 @@ exports.addComment = async (req, res) => {
       io.emit('post_commented', {
         postId,
         comment: populatedComment,
+        commentsCount: updatedPost.commentCount, // ✅ Send updated count
       });
     }
 
@@ -107,16 +110,20 @@ exports.deleteComment = async (req, res) => {
 
     await Comment.findByIdAndDelete(commentId);
 
-    await Post.findByIdAndUpdate(comment.post, {
-      $inc: { commentCount: -1 },
-    });
+    // Decrement comment count
+    const updatedPost = await Post.findByIdAndUpdate(
+      comment.post,
+      { $inc: { commentCount: -1 } },
+      { new: true }
+    );
 
-    /* ===== SOCKET ===== */
+    /* ===== REAL-TIME UPDATE ===== */
     const io = req.app.get('io');
     if (io) {
       io.emit('comment_deleted', {
         postId: comment.post,
         commentId,
+        commentsCount: updatedPost.commentCount, // ✅ Send updated count
       });
     }
 

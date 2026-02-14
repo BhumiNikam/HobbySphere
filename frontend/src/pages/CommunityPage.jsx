@@ -1,12 +1,13 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { useTranslation } from 'react-i18next';
 import API from '../services/api';
 import PostCard from '../components/PostCard';
 import PostForm from '../components/PostForm';
 import toast from 'react-hot-toast';
-import { Info, Trash2, Users as UsersIcon, TrendingUp, Tag, Crown, LogOut } from 'lucide-react';
+import { Info, Trash2, Users as UsersIcon, TrendingUp, Tag, Crown, LogOut, X } from 'lucide-react';
 
 const communityCache = new Map();
 
@@ -14,6 +15,7 @@ export default function CommunityPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, refreshUser } = useContext(AuthContext);
+  const { socket } = useSocket();
   const { t } = useTranslation();
   
   const [community, setCommunity] = useState(null);
@@ -41,6 +43,66 @@ export default function CommunityPage() {
       fetchPosts();
     }
   }, [id]);
+
+  // ✅ Real-time updates via Socket.io
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    const handlePostCreated = (newPost) => {
+      if (newPost.community?._id === id || newPost.community === id) {
+        setPosts(prev => [newPost, ...prev]);
+      }
+    };
+
+    const handlePostDeleted = ({ postId }) => {
+      setPosts(prev => prev.filter(p => p._id !== postId));
+    };
+
+    const handleMemberJoined = ({ communityId, memberCount }) => {
+      if (communityId === id) {
+        setCommunity(prev => ({ ...prev, memberCount }));
+      }
+    };
+
+    const handleMemberLeft = ({ communityId, userId, memberCount }) => {
+      if (communityId === id) {
+        setCommunity(prev => ({ ...prev, memberCount }));
+        if (userId === user._id) {
+          setIsMember(false);
+        }
+      }
+    };
+
+    const handleCommunityUpdated = (updatedCommunity) => {
+      if (updatedCommunity._id === id) {
+        setCommunity(updatedCommunity);
+        communityCache.set(id, {
+          data: updatedCommunity,
+          timestamp: Date.now()
+        });
+      }
+    };
+
+    socket.on('community_post_created', handlePostCreated);
+    socket.on('post_created', handlePostCreated);
+    socket.on('post_deleted', handlePostDeleted);
+    socket.on('community_member_joined', handleMemberJoined);
+    socket.on('community_member_left', handleMemberLeft);
+    socket.on('community_updated', handleCommunityUpdated);
+
+    // Join community room for real-time updates
+    socket.emit('join_community', id);
+
+    return () => {
+      socket.off('community_post_created', handlePostCreated);
+      socket.off('post_created', handlePostCreated);
+      socket.off('post_deleted', handlePostDeleted);
+      socket.off('community_member_joined', handleMemberJoined);
+      socket.off('community_member_left', handleMemberLeft);
+      socket.off('community_updated', handleCommunityUpdated);
+      socket.emit('leave_community', id);
+    };
+  }, [socket, id, user]);
 
   const fetchCommunity = async () => {
     try {
@@ -151,6 +213,15 @@ export default function CommunityPage() {
 
   return (
     <div className="w-full pb-12">
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex"
+        title="Go back"
+      >
+        <X size={24} className="text-slate-700 dark:text-slate-300" />
+      </button>
+      
       {/* COMMUNITY HEADER */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-card mb-8 overflow-hidden border border-slate-200/60 dark:border-slate-700/60">
         <div className="h-40 bg-gradient-to-r from-indigo-500 to-purple-600" style={{
@@ -361,14 +432,33 @@ export default function CommunityPage() {
         </div>
       )}
 
-      {/* POST FORM */}
+      {/* POST FORM - ✅ ONLY FOR MEMBERS */}
       {isMember && (
         <div className="mb-8">
           <PostForm onPostCreated={handlePostCreated} communityId={id} />
         </div>
       )}
 
-      {/* POSTS LIST */}
+      {/* ✅ JOIN PROMPT FOR NON-MEMBERS */}
+      {!isMember && (
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 p-8 mb-8 text-center">
+          <div className="text-5xl mb-4">🔒</div>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+            Join to Participate
+          </h3>
+          <p className="text-slate-600 dark:text-slate-400 mb-4">
+            Join this community to create posts and interact with members
+          </p>
+          <button
+            onClick={handleJoin}
+            className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all font-semibold"
+          >
+            Join Community
+          </button>
+        </div>
+      )}
+
+      {/* POSTS LIST - ✅ PASS isMember TO PostCard */}
       <div className="w-full space-y-6">
         {posts.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-16 text-center border border-slate-100 dark:border-slate-700">
@@ -384,6 +474,7 @@ export default function CommunityPage() {
               key={post._id}
               post={post}
               currentUser={user}
+              isMember={isMember}
               onDelete={handlePostDeleted}
             />
           ))

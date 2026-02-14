@@ -56,6 +56,10 @@ exports.createCommunity = async (req, res) => {
       .populate('moderators', 'username fullName profileImage')
       .lean();
 
+    // Real-time update
+    const io = req.app.get('io');
+    io?.emit('community_created', populated);
+
     res.status(201).json(populated);
   } catch (error) {
     console.error('Create community error:', error);
@@ -63,7 +67,7 @@ exports.createCommunity = async (req, res) => {
   }
 };
 
-// ✅ OPTIMIZED: Get all communities with membership info
+// Get all communities with membership info
 exports.getCommunities = async (req, res) => {
   try {
     const { category, search, sort = 'popular', page = 1, limit = 12 } = req.query;
@@ -97,7 +101,6 @@ exports.getCommunities = async (req, res) => {
         sortOption = { memberCount: -1 };
     }
 
-    // ✅ Use .lean() for read-only data - 5x faster
     const [communities, total] = await Promise.all([
       Community.find(query)
         .populate('creator', 'username fullName profileImage')
@@ -108,7 +111,6 @@ exports.getCommunities = async (req, res) => {
       Community.countDocuments(query)
     ]);
 
-    // ✅ Add membership info for current user
     const userId = req.user._id.toString();
     const communitiesWithMembership = communities.map(community => ({
       ...community,
@@ -128,7 +130,7 @@ exports.getCommunities = async (req, res) => {
   }
 };
 
-// ✅ OPTIMIZED: Get single community
+// Get single community
 exports.getCommunity = async (req, res) => {
   try {
     const { id } = req.params;
@@ -142,7 +144,6 @@ exports.getCommunity = async (req, res) => {
       return res.status(404).json({ message: 'Community not found' });
     }
 
-    // ✅ Faster membership check with Set
     const memberSet = new Set(community.members.map(m => m.toString()));
     const modSet = new Set(community.moderators.map(m => m._id.toString()));
     
@@ -185,6 +186,14 @@ exports.joinCommunity = async (req, res) => {
       $addToSet: { communities: community._id }
     });
 
+    // Real-time update
+    const io = req.app.get('io');
+    io?.emit('community_member_joined', {
+      communityId: id,
+      userId: req.user._id,
+      memberCount: community.memberCount
+    });
+
     res.json({ message: 'Joined community successfully', memberCount: community.memberCount });
   } catch (error) {
     console.error('Join community error:', error);
@@ -218,6 +227,14 @@ exports.leaveCommunity = async (req, res) => {
       }
     });
 
+    // Real-time update
+    const io = req.app.get('io');
+    io?.emit('community_member_left', {
+      communityId: id,
+      userId: req.user._id,
+      memberCount: community.memberCount
+    });
+
     res.json({ message: 'Left community successfully' });
   } catch (error) {
     console.error('Leave community error:', error);
@@ -225,14 +242,21 @@ exports.leaveCommunity = async (req, res) => {
   }
 };
 
-// ✅ OPTIMIZED: Get community posts
+// ✅ Get community posts - WITH MEMBERSHIP CHECK
 exports.getCommunityPosts = async (req, res) => {
   try {
     const { id } = req.params;
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    // ✅ Parallel queries for speed
+    // Check community membership
+    const community = await Community.findById(id).select('members').lean();
+    if (!community) {
+      return res.status(404).json({ message: 'Community not found' });
+    }
+
+    const isMember = community.members.some(m => m.toString() === req.user._id.toString());
+
     const [posts, total] = await Promise.all([
       Post.find({ community: id })
         .populate('author', 'username fullName profileImage')
@@ -247,7 +271,8 @@ exports.getCommunityPosts = async (req, res) => {
       posts,
       total,
       page: parseInt(page),
-      pages: Math.ceil(total / limit)
+      pages: Math.ceil(total / limit),
+      isMember // ✅ Send membership status to frontend
     });
   } catch (error) {
     console.error('Get community posts error:', error);
@@ -255,7 +280,7 @@ exports.getCommunityPosts = async (req, res) => {
   }
 };
 
-// ✅ OPTIMIZED: Get community members
+// Get community members
 exports.getCommunityMembers = async (req, res) => {
   try {
     const { id } = req.params;
@@ -285,7 +310,7 @@ exports.getCommunityMembers = async (req, res) => {
   }
 };
 
-// ✅ OPTIMIZED: Get user's communities
+// Get user's communities
 exports.getUserCommunities = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
@@ -324,6 +349,10 @@ exports.updateCommunity = async (req, res) => {
 
     await community.save();
 
+    // Real-time update
+    const io = req.app.get('io');
+    io?.emit('community_updated', community);
+
     res.json(community);
   } catch (error) {
     console.error('Update community error:', error);
@@ -356,6 +385,10 @@ exports.deleteCommunity = async (req, res) => {
 
     await Community.findByIdAndDelete(id);
 
+    // Real-time update
+    const io = req.app.get('io');
+    io?.emit('community_deleted', { communityId: id });
+
     res.json({ message: 'Community deleted successfully' });
   } catch (error) {
     console.error('Delete community error:', error);
@@ -363,7 +396,7 @@ exports.deleteCommunity = async (req, res) => {
   }
 };
 
-// ✅ OPTIMIZED: Suggested communities
+// Suggested communities
 exports.getSuggestedCommunities = async (req, res) => {
   try {
     const userId = req.user._id;

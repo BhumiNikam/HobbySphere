@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CommentSection from './CommentSection';
+import MediaRenderer from './MediaRenderer';
 import {
   Heart,
   MessageCircle,
@@ -9,12 +10,14 @@ import {
   Bookmark,
   MoreVertical,
   Share2,
+  Download,
+  Lock,
 } from 'lucide-react';
 import API from '../services/api';
 import { useSocket } from '../context/SocketContext';
+import toast from 'react-hot-toast';
 
-// ✅ Memoize to prevent unnecessary re-renders
-const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
+const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true }) => {
   const navigate = useNavigate();
   const { socket } = useSocket();
   const { t } = useTranslation();
@@ -40,6 +43,7 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
   const [showComments, setShowComments] = useState(false);
   const [likeBurst, setLikeBurst] = useState(false);
 
+  // ✅ Real-time socket listeners
   useEffect(() => {
     if (!socket) return;
 
@@ -61,30 +65,44 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
       if (postId === post._id) setCommentCount(commentsCount);
     };
 
+    const onBookmark = ({ postId, userId: actionUserId }) => {
+      if (postId === post._id && actionUserId === userId) {
+        setIsBookmarked(true);
+      }
+    };
+
+    const onBookmarkRemoved = ({ postId, userId: actionUserId }) => {
+      if (postId === post._id && actionUserId === userId) {
+        setIsBookmarked(false);
+      }
+    };
+
     socket.on('post_liked', onLike);
     socket.on('post_unliked', onUnlike);
     socket.on('post_commented', onComment);
     socket.on('comment_deleted', onComment);
+    socket.on('bookmark_added', onBookmark);
+    socket.on('bookmark_removed', onBookmarkRemoved);
 
     return () => {
       socket.off('post_liked', onLike);
       socket.off('post_unliked', onUnlike);
       socket.off('post_commented', onComment);
       socket.off('comment_deleted', onComment);
+      socket.off('bookmark_added', onBookmark);
+      socket.off('bookmark_removed', onBookmarkRemoved);
     };
   }, [socket, post._id, userId]);
 
-  // ✅ Only check bookmarks when comment section is opened (lazy load)
+  // ✅ Check bookmark status
   useEffect(() => {
-    if (!showComments) return;
-    
     (async () => {
       try {
-        const res = await API.get('/bookmarks');
-        setIsBookmarked(res.data.some((b) => b?._id === post._id));
+        const res = await API.get(`/bookmarks/check/${post._id}`);
+        setIsBookmarked(res.data.isBookmarked);
       } catch {}
     })();
-  }, [post._id, showComments]);
+  }, [post._id]);
 
   useEffect(() => {
     const closeMenu = (e) => {
@@ -97,27 +115,29 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
   }, []);
 
   const handleLike = useCallback(async () => {
+    if (!isMember) {
+      toast.error('Join the community to interact with posts');
+      return;
+    }
+
     try {
-      // ✅ Optimistic update
       const newIsLiked = !isLiked;
       setIsLiked(newIsLiked);
       setLikes(prev => newIsLiked ? prev + 1 : prev - 1);
       
       const res = await API.post(`/posts/${post._id}/like`);
       
-      // Sync with server response
       setLikes(res.data.likes.length);
       setIsLiked(res.data.isLiked);
     } catch (err) {
-      // Revert on error
       setIsLiked(!isLiked);
       setLikes(prev => isLiked ? prev + 1 : prev - 1);
       console.error('Like failed:', err);
     }
-  }, [post._id, isLiked]);
+  }, [post._id, isLiked, isMember]);
 
   const handleMediaDoubleClick = useCallback(async () => {
-    if (isLiked) return;
+    if (isLiked || !isMember) return;
 
     setLikeBurst(true);
     setIsLiked(true);
@@ -132,15 +152,74 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
     }
     
     setTimeout(() => setLikeBurst(false), 600);
-  }, [post._id, isLiked]);
+  }, [post._id, isLiked, isMember]);
 
   const handleDelete = useCallback(async () => {
     if (!window.confirm(t('post.delete') + '?')) return;
     try {
       await API.delete(`/posts/${post._id}`);
       onDelete?.(post._id);
-    } catch {}
+      toast.success('Post deleted');
+    } catch {
+      toast.error('Failed to delete post');
+    }
   }, [post._id, onDelete, t]);
+
+  const handleBookmark = useCallback(async () => {
+    try {
+      const res = await API.post(`/bookmarks/${post._id}`);
+      setIsBookmarked(res.data.isBookmarked);
+      toast.success(res.data.message);
+    } catch (err) {
+      console.error('Bookmark failed:', err);
+      toast.error('Failed to bookmark post');
+    }
+  }, [post._id]);
+
+  const handleShare = useCallback(async () => {
+    const shareUrl = `${window.location.origin}/post/${post._id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Post by ${post.author.username}`,
+          text: post.content.substring(0, 100),
+          url: shareUrl
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          copyToClipboard(shareUrl);
+        }
+      }
+    } else {
+      copyToClipboard(shareUrl);
+    }
+  }, [post]);
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Link copied to clipboard');
+  };
+
+  const handleDownload = useCallback(async (mediaIndex) => {
+    try {
+      const res = await API.get(`/posts/${post._id}/download/${mediaIndex}`);
+      
+      // Create temporary anchor and trigger download
+      const link = document.createElement('a');
+      link.href = res.data.url;
+      link.download = res.data.fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Download started');
+    } catch (err) {
+      console.error('Download failed:', err);
+      toast.error('Failed to download file');
+    }
+  }, [post._id]);
 
   const renderContent = useCallback((text) =>
     text.split(/(#\w+)/g).map((part, i) => {
@@ -170,8 +249,21 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
         transition-all duration-300 ease-out
         hover:-translate-y-0.5
         ${isSeen ? 'opacity-90' : ''}
+        ${!isMember ? 'relative' : ''}
       `}
     >
+      {/* Non-member overlay */}
+      {!isMember && (
+        <div className="absolute inset-0 bg-black/5 dark:bg-black/10 backdrop-blur-[2px] z-10 rounded-2xl flex items-center justify-center pointer-events-none">
+          <div className="bg-white/90 dark:bg-slate-800/90 px-4 py-2 rounded-lg flex items-center gap-2">
+            <Lock size={16} className="text-slate-600 dark:text-slate-400" />
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Join community to interact
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex items-center justify-between p-3 sm:p-4">
         <div
@@ -225,7 +317,17 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
       </div>
 
       {/* MEDIA */}
-      {post.images?.length > 0 && (
+      {post.media?.length > 0 && (
+        <MediaRenderer 
+          media={post.media} 
+          onDoubleClick={handleMediaDoubleClick}
+          onDownload={handleDownload}
+          showDownload={isMember}
+        />
+      )}
+
+      {/* Legacy support for old 'images' field */}
+      {post.images?.length > 0 && !post.media?.length && (
         <div 
           onDoubleClick={handleMediaDoubleClick} 
           className="relative bg-slate-950 flex items-center justify-center"
@@ -265,12 +367,14 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
       <div className="flex items-center gap-0.5 sm:gap-1 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 dark:border-slate-800">
         <button
           onClick={handleLike}
+          disabled={!isMember}
           className={`
             p-2 sm:p-2.5 rounded-xl transition-all duration-200 tap-target
             ${isLiked 
               ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20' 
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-red-500 dark:hover:text-red-400'
             }
+            ${!isMember ? 'opacity-50 cursor-not-allowed' : ''}
           `}
           title={t('post.like')}
         >
@@ -278,14 +382,16 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
         </button>
 
         <button
-          onClick={() => setShowComments((p) => !p)}
-          className="p-2 sm:p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all tap-target"
+          onClick={() => isMember && setShowComments((p) => !p)}
+          disabled={!isMember}
+          className={`p-2 sm:p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all tap-target ${!isMember ? 'opacity-50 cursor-not-allowed' : ''}`}
           title={t('post.comment')}
         >
           <MessageCircle size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
         </button>
 
         <button 
+          onClick={handleShare}
           className="p-2 sm:p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all tap-target"
           title={t('post.share')}
         >
@@ -293,6 +399,7 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
         </button>
 
         <button
+          onClick={handleBookmark}
           className={`
             ml-auto p-2 sm:p-2.5 rounded-xl transition-all duration-200 tap-target
             ${isBookmarked 
@@ -323,8 +430,9 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
 
         {commentCount > 0 && (
           <button
-            onClick={() => setShowComments((p) => !p)}
-            className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2 transition-colors"
+            onClick={() => isMember && setShowComments((p) => !p)}
+            disabled={!isMember}
+            className={`text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2 transition-colors ${!isMember ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {t('common.viewMore')} {commentCount} {commentCount === 1 ? t('post.comment') : t('post.comment') + 's'}
           </button>
@@ -332,7 +440,7 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen }) => {
       </div>
 
       {/* COMMENTS */}
-      {showComments && (
+      {showComments && isMember && (
         <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-slate-100 dark:border-slate-800 mt-3">
           <CommentSection
             postId={post._id}

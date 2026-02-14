@@ -1,20 +1,54 @@
 import { useState, useEffect, useRef } from 'react';
 import { Trash2, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSocket } from '../context/SocketContext';
 import API from '../services/api';
 
 export default function CommentSection({
   postId,
   currentUser,
-  commentCount,
+  commentCount: initialCommentCount,
 }) {
   const { t } = useTranslation();
+  const { socket } = useSocket();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(initialCommentCount || 0);
 
   const inputRef = useRef(null);
+
+  /* ================= REAL-TIME UPDATES ================= */
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleCommentAdded = ({ postId: eventPostId, comment, commentsCount }) => {
+      if (eventPostId === postId) {
+        setComments((prev) => {
+          // Avoid duplicates
+          if (prev.some(c => c._id === comment._id)) return prev;
+          return [comment, ...prev];
+        });
+        setCommentCount(commentsCount);
+      }
+    };
+
+    const handleCommentDeleted = ({ postId: eventPostId, commentId, commentsCount }) => {
+      if (eventPostId === postId) {
+        setComments((prev) => prev.filter((c) => c._id !== commentId));
+        setCommentCount(commentsCount);
+      }
+    };
+
+    socket.on('post_commented', handleCommentAdded);
+    socket.on('comment_deleted', handleCommentDeleted);
+
+    return () => {
+      socket.off('post_commented', handleCommentAdded);
+      socket.off('comment_deleted', handleCommentDeleted);
+    };
+  }, [socket, postId]);
 
   /* ================= FETCH COMMENTS ================= */
   useEffect(() => {
@@ -22,15 +56,12 @@ export default function CommentSection({
 
     fetchComments();
 
-    // Small delay for smooth focus
     setTimeout(() => inputRef.current?.focus(), 120);
   }, [showComments]);
 
   const fetchComments = async () => {
     try {
-      const res = await API.get(
-        `/posts/${postId}/comments`
-      );
+      const res = await API.get(`/posts/${postId}/comments`);
       setComments(res.data);
     } catch {
       console.error('Failed to fetch comments');
@@ -44,11 +75,9 @@ export default function CommentSection({
 
     setLoading(true);
     try {
-      const res = await API.post(
-        `/posts/${postId}/comments`,
-        { text: newComment }
-      );
+      const res = await API.post(`/posts/${postId}/comments`, { text: newComment });
 
+      // Add comment optimistically
       setComments((prev) => [res.data, ...prev]);
       setNewComment('');
     } finally {
@@ -62,9 +91,8 @@ export default function CommentSection({
 
     try {
       await API.delete(`/posts/comments/${commentId}`);
-      setComments((prev) =>
-        prev.filter((c) => c._id !== commentId)
-      );
+      // Remove comment optimistically
+      setComments((prev) => prev.filter((c) => c._id !== commentId));
     } catch {
       console.error('Delete comment failed');
     }
@@ -72,9 +100,7 @@ export default function CommentSection({
 
   /* ================= TIME FORMAT ================= */
   const formatDate = (date) => {
-    const diff = Math.floor(
-      (Date.now() - new Date(date)) / 1000
-    );
+    const diff = Math.floor((Date.now() - new Date(date)) / 1000);
 
     if (diff < 60) return t('post.justNow');
     if (diff < 3600) return `${Math.floor(diff / 60)}m`;
@@ -96,7 +122,7 @@ export default function CommentSection({
       >
         {showComments
           ? t('common.viewLess')
-          : `${t('common.viewMore')} ${commentCount} ${t('post.comment')}s`}
+          : `${t('common.viewMore')} ${commentCount} ${t('post.comment')}${commentCount !== 1 ? 's' : ''}`}
       </button>
 
       {showComments && (
@@ -115,9 +141,7 @@ export default function CommentSection({
             <input
               ref={inputRef}
               value={newComment}
-              onChange={(e) =>
-                setNewComment(e.target.value)
-              }
+              onChange={(e) => setNewComment(e.target.value)}
               placeholder={t('post.writeComment')}
               maxLength={500}
               className="
@@ -151,10 +175,7 @@ export default function CommentSection({
 
           {/* COMMENTS */}
           {comments.map((comment) => (
-            <div
-              key={comment._id}
-              className="flex gap-3 group"
-            >
+            <div key={comment._id} className="flex gap-3 group">
               {/* AVATAR */}
               <img
                 src={
@@ -162,30 +183,20 @@ export default function CommentSection({
                   `https://ui-avatars.com/api/?name=${comment.author?.fullName}&background=6366f1&color=fff`
                 }
                 alt={comment.author?.fullName}
-                className="
-                  w-8 h-8 rounded-full
-                  object-cover flex-shrink-0
-                "
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
               />
 
               {/* BODY */}
               <div className="flex-1">
-                <div className="
-                  bg-slate-100 dark:bg-slate-700
-                  rounded-2xl
-                  px-4 py-2.5
-                ">
+                <div className="bg-slate-100 dark:bg-slate-700 rounded-2xl px-4 py-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {comment.author?.fullName}
                     </p>
 
-                    {currentUser?._id ===
-                      comment.author?._id && (
+                    {currentUser?._id === comment.author?._id && (
                       <button
-                        onClick={() =>
-                          handleDelete(comment._id)
-                        }
+                        onClick={() => handleDelete(comment._id)}
                         className="
                           text-slate-400
                           opacity-0 group-hover:opacity-100

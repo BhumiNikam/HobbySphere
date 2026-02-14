@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Globe, Users, Image as ImageIcon, X, Video } from 'lucide-react';
+import { Globe, Users, Image as ImageIcon, X, Video, Music, FileText, File, Paperclip } from 'lucide-react';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,14 +12,13 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
 
   const [content, setContent] = useState('');
   const [mediaFiles, setMediaFiles] = useState([]);
-  const [mediaPreview, setMediaPreview] = useState(null);
+  const [mediaPreviews, setMediaPreviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [postTo, setPostTo] = useState(propCommunityId ? 'community' : 'profile');
   const [selectedCommunity, setSelectedCommunity] = useState(propCommunityId || '');
   const [communities, setCommunities] = useState([]);
   const [loadingCommunities, setLoadingCommunities] = useState(true);
 
-  // ✅ FIX: Fetch user's JOINED communities properly
   useEffect(() => {
     const fetchCommunities = async () => {
       try {
@@ -27,7 +26,6 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
         const res = await API.get('/communities');
         const allCommunities = res.data.communities || [];
         
-        // Filter to only show communities the user has joined
         const joinedCommunities = allCommunities.filter((community) =>
           community.members.some(
             (member) => 
@@ -47,63 +45,106 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
     fetchCommunities();
   }, [user._id, t]);
 
+  const getMediaType = (file) => {
+    if (file.type.startsWith('image/')) return 'image';
+    if (file.type.startsWith('video/')) return 'video';
+    if (file.type.startsWith('audio/')) return 'audio';
+    if (file.type === 'application/pdf') return 'pdf';
+    return 'document';
+  };
+
+  const getMediaIcon = (type) => {
+    switch (type) {
+      case 'image': return <ImageIcon size={20} />;
+      case 'video': return <Video size={20} />;
+      case 'audio': return <Music size={20} />;
+      case 'pdf': return <FileText size={20} />;
+      case 'document': return <File size={20} />;
+      default: return <Paperclip size={20} />;
+    }
+  };
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    const file = files[0]; // Only take first file
-    const isVideo = file.type.startsWith('video/');
-
-    if (isVideo && file.size > 50 * 1024 * 1024) {
-      toast.error(t('post.videoTooLarge') || 'Video must be less than 50MB');
-      return;
-    }
-
-    if (!isVideo && file.size > 10 * 1024 * 1024) {
-      toast.error(t('post.imageTooLarge') || 'Image must be less than 10MB');
-      return;
-    }
-
-    setMediaFiles([file]);
-
-    // ✅ Create preview with original aspect ratio
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (isVideo) {
-        // For video, create a video element to get dimensions
-        const video = document.createElement('video');
-        video.src = event.target.result;
-        video.onloadedmetadata = () => {
-          setMediaPreview({
-            url: event.target.result,
-            type: 'video',
-            width: video.videoWidth,
-            height: video.videoHeight,
-            aspectRatio: video.videoWidth / video.videoHeight
-          });
-        };
-      } else {
-        // For image, create an image element to get dimensions
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          setMediaPreview({
-            url: event.target.result,
-            type: 'image',
-            width: img.width,
-            height: img.height,
-            aspectRatio: img.width / img.height
-          });
-        };
+    // Validate file sizes
+    for (const file of files) {
+      if (file.size > 100 * 1024 * 1024) {
+        toast.error(`${file.name} is too large. Maximum size is 100MB`);
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+    }
+
+    // Limit to 10 files
+    const totalFiles = mediaFiles.length + files.length;
+    if (totalFiles > 10) {
+      toast.error('Maximum 10 files allowed');
+      return;
+    }
+
+    setMediaFiles(prev => [...prev, ...files]);
+
+    // Create previews
+    files.forEach(file => {
+      const type = getMediaType(file);
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        if (type === 'video') {
+          const video = document.createElement('video');
+          video.src = event.target.result;
+          video.onloadedmetadata = () => {
+            setMediaPreviews(prev => [...prev, {
+              url: event.target.result,
+              type: 'video',
+              name: file.name,
+              size: file.size,
+              width: video.videoWidth,
+              height: video.videoHeight,
+              aspectRatio: video.videoWidth / video.videoHeight
+            }]);
+          };
+        } else if (type === 'image') {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            setMediaPreviews(prev => [...prev, {
+              url: event.target.result,
+              type: 'image',
+              name: file.name,
+              size: file.size,
+              width: img.width,
+              height: img.height,
+              aspectRatio: img.width / img.height
+            }]);
+          };
+        } else {
+          setMediaPreviews(prev => [...prev, {
+            url: event.target.result,
+            type,
+            name: file.name,
+            size: file.size
+          }]);
+        }
+      };
+      
+      reader.readAsDataURL(file);
+    });
   };
 
-  const removeMedia = () => {
-    setMediaFiles([]);
-    setMediaPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const removeMedia = (index) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    setMediaPreviews(prev => prev.filter((_, i) => i !== index));
+    if (fileInputRef.current && mediaFiles.length === 1) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   const handleSubmit = async (e) => {
@@ -114,7 +155,6 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
       return;
     }
 
-    // ✅ Validate community selection only if posting to community
     if (postTo === 'community' && !selectedCommunity) {
       toast.error(t('post.selectCommunityRequired') || 'Please select a community');
       return;
@@ -126,7 +166,6 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
       const formData = new FormData();
       formData.append('content', content);
 
-      // ✅ FIX: Ensure selectedCommunity is a string ID, not an object
       if (postTo === 'community' && selectedCommunity) {
         const communityId = typeof selectedCommunity === 'string' 
           ? selectedCommunity 
@@ -134,11 +173,12 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
         formData.append('communityId', communityId);
       }
 
+      // ✅ Changed from 'images' to 'media'
       mediaFiles.forEach((file) => {
-        formData.append('images', file);
+        formData.append('media', file);
       });
 
-      await API.post('/posts', formData, {
+      const res = await API.post('/posts', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -147,12 +187,15 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
       // Reset form
       setContent('');
       setMediaFiles([]);
-      setMediaPreview(null);
+      setMediaPreviews([]);
       setSelectedCommunity(propCommunityId || '');
       if (!propCommunityId) setPostTo('profile');
       if (fileInputRef.current) fileInputRef.current.value = '';
 
-      onPostCreated?.();
+      // Call callback with new post
+      if (onPostCreated) {
+        onPostCreated(res.data);
+      }
     } catch (err) {
       const message = err.response?.data?.message || t('post.createFailed') || 'Failed to create post';
       toast.error(message);
@@ -164,7 +207,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ✅ POST TO SELECTOR - Only show if not forced to community */}
+      {/* POST TO SELECTOR */}
       {!propCommunityId && (
         <div className="flex gap-2">
           <button
@@ -202,7 +245,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
         </div>
       )}
 
-      {/* ✅ COMMUNITY SELECTOR - Only show if posting to community */}
+      {/* COMMUNITY SELECTOR */}
       {postTo === 'community' && (
         <div>
           <select
@@ -210,7 +253,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
             onChange={(e) => setSelectedCommunity(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             required={postTo === 'community'}
-            disabled={loadingCommunities}
+            disabled={loadingCommunities || propCommunityId}
           >
             <option value="">
               {loadingCommunities 
@@ -224,7 +267,7 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
               </option>
             ))}
           </select>
-          {!loadingCommunities && communities.length === 0 && (
+          {!loadingCommunities && communities.length === 0 && !propCommunityId && (
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
               {t('post.noCommunities') || "You haven't joined any communities yet"}
             </p>
@@ -245,45 +288,73 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
         {content.length}/2000
       </div>
 
-      {/* ✅ MEDIA PREVIEW - Maintains aspect ratio */}
-      {mediaPreview && (
-        <div className="relative bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden">
-          <button
-            type="button"
-            onClick={removeMedia}
-            className="absolute top-2 right-2 z-10 p-2 bg-black/60 hover:bg-black/80 rounded-full text-white transition-all"
-          >
-            <X size={18} />
-          </button>
+      {/* MEDIA PREVIEWS */}
+      {mediaPreviews.length > 0 && (
+        <div className="space-y-3">
+          {mediaPreviews.map((preview, index) => (
+            <div key={index} className="relative bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => removeMedia(index)}
+                className="absolute top-2 right-2 z-10 p-2 bg-black/60 hover:bg-black/80 rounded-full text-white transition-all"
+              >
+                <X size={18} />
+              </button>
 
-          <div 
-            className="flex items-center justify-center bg-slate-950"
-            style={{
-              aspectRatio: mediaPreview.aspectRatio,
-              maxHeight: '500px'
-            }}
-          >
-            {mediaPreview.type === 'video' ? (
-              <video
-                src={mediaPreview.url}
-                controls
-                className="w-full h-full object-contain"
-                style={{ maxHeight: '500px' }}
-              />
-            ) : (
-              <img
-                src={mediaPreview.url}
-                alt="Preview"
-                className="w-full h-full object-contain"
-                style={{ maxHeight: '500px' }}
-              />
-            )}
-          </div>
+              {preview.type === 'video' ? (
+                <div 
+                  className="flex items-center justify-center bg-slate-950"
+                  style={{
+                    aspectRatio: preview.aspectRatio,
+                    maxHeight: '400px'
+                  }}
+                >
+                  <video
+                    src={preview.url}
+                    controls
+                    className="w-full h-full object-contain"
+                    style={{ maxHeight: '400px' }}
+                  />
+                </div>
+              ) : preview.type === 'image' ? (
+                <div 
+                  className="flex items-center justify-center bg-slate-950"
+                  style={{
+                    aspectRatio: preview.aspectRatio,
+                    maxHeight: '400px'
+                  }}
+                >
+                  <img
+                    src={preview.url}
+                    alt="Preview"
+                    className="w-full h-full object-contain"
+                    style={{ maxHeight: '400px' }}
+                  />
+                </div>
+              ) : (
+                <div className="p-4 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    {getMediaIcon(preview.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                      {preview.name}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {formatFileSize(preview.size)}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-          {/* Dimensions info */}
-          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 rounded text-white text-xs">
-            {mediaPreview.width} × {mediaPreview.height}
-          </div>
+              {/* Dimensions info for images/videos */}
+              {(preview.type === 'image' || preview.type === 'video') && (
+                <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 rounded text-white text-xs">
+                  {preview.width} × {preview.height}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -293,17 +364,21 @@ export default function PostForm({ onPostCreated, communityId: propCommunityId }
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,video/*"
+            accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
             onChange={handleFileChange}
             className="hidden"
             id="media-upload"
+            multiple
           />
           <label
             htmlFor="media-upload"
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-all"
           >
-            <ImageIcon size={18} />
-            <span className="text-sm font-medium">{t('post.addMedia') || 'Add Media'}</span>
+            <Paperclip size={18} />
+            <span className="text-sm font-medium">
+              {t('post.addMedia') || 'Add Media'} 
+              {mediaFiles.length > 0 && ` (${mediaFiles.length})`}
+            </span>
           </label>
         </div>
 

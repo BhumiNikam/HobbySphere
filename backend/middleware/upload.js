@@ -6,19 +6,34 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 
 /* ===============================
-   FILE FILTER
+   FILE FILTER - ALL MEDIA TYPES
 ================================ */
 const fileFilter = (req, file, cb) => {
-  const allowedImage = file.mimetype.startsWith('image/');
-  const allowedVideo = file.mimetype.startsWith('video/');
+  const allowedTypes = [
+    // Images
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+    // Videos
+    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo',
+    // Audio
+    'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp3',
+    // Documents
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain'
+  ];
 
-  if (allowedImage || allowedVideo) {
+  if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(
       new multer.MulterError(
         'LIMIT_UNEXPECTED_FILE',
-        'Only images and videos are allowed'
+        'Invalid file type. Allowed: images, videos, audio, PDFs, and documents'
       ),
       false
     );
@@ -31,8 +46,8 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   limits: {
-    fileSize: 30 * 1024 * 1024, // ✅ 30MB (safe for reels / short videos)
-    files: 4,                  // ✅ max 4 files (matches frontend)
+    fileSize: 100 * 1024 * 1024, // 100MB for videos
+    files: 10, // Max 10 files
   },
   fileFilter,
 });

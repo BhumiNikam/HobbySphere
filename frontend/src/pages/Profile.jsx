@@ -11,6 +11,8 @@ import {
   Camera,
   Mail,
   User as UserIcon,
+  X,
+  Bookmark,
 } from 'lucide-react';
 import ImageUploadModal from '../components/ImageUploadModal';
 import PostCard from '../components/PostCard';
@@ -24,9 +26,11 @@ export default function Profile() {
 
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [savedPosts, setSavedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+  const [activeTab, setActiveTab] = useState('posts'); // 'posts' or 'saved'
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -40,10 +44,9 @@ export default function Profile() {
     try {
       setLoading(true);
 
-      // ✅ PARALLEL API CALLS
       const [profileRes, postsRes] = await Promise.all([
         API.get(`/users/${username}`),
-        API.get(`/users/${username}/posts?limit=20`), // Load more initially
+        API.get(`/users/${username}/posts?limit=20`),
       ]);
 
       const data = profileRes.data;
@@ -64,10 +67,24 @@ export default function Profile() {
       } else {
         setIsFollowing(false);
       }
+
+      // Load saved posts if viewing own profile
+      if (currentUser?.username === username) {
+        loadSavedPosts();
+      }
     } catch {
       setProfile(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSavedPosts = async () => {
+    try {
+      const res = await API.get('/bookmarks');
+      setSavedPosts(res.data.posts || []);
+    } catch (err) {
+      console.error('Failed to load saved posts:', err);
     }
   };
 
@@ -77,7 +94,6 @@ export default function Profile() {
       setIsFollowing(res.data.isFollowing);
       setFollowerCount((c) => (res.data.isFollowing ? c + 1 : c - 1));
       
-      // ✅ Clear relevant caches
       clearCache(`/users/${username}`);
       
       if (refreshUser) {
@@ -125,6 +141,15 @@ export default function Profile() {
 
   return (
     <div className="w-full pb-8 sm:pb-12 animate-fade-in max-w-4xl mx-auto">
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex"
+        title="Go back"
+      >
+        <X size={24} className="text-slate-700 dark:text-slate-300" />
+      </button>
+      
       <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-sm dark:shadow-xl dark:shadow-black/20 overflow-hidden mb-6 sm:mb-8 border border-slate-200 dark:border-slate-800">
         {/* Cover Image */}
         <div className="relative h-40 sm:h-56 md:h-72 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
@@ -276,33 +301,104 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* Tabs */}
+      {isOwnProfile && (
+        <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800">
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={`px-6 py-3 font-semibold text-sm transition-colors relative ${
+              activeTab === 'posts'
+                ? 'text-indigo-600 dark:text-indigo-400'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            Posts
+            {activeTab === 'posts' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('saved')}
+            className={`px-6 py-3 font-semibold text-sm transition-colors relative flex items-center gap-2 ${
+              activeTab === 'saved'
+                ? 'text-indigo-600 dark:text-indigo-400'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            <Bookmark size={16} />
+            Saved
+            {activeTab === 'saved' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400" />
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Posts Section */}
       <div className="w-full space-y-4 sm:space-y-6">
-        <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 px-1">{t('profile.posts')}</h2>
+        {activeTab === 'posts' && (
+          <>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 px-1">
+              {isOwnProfile ? 'Your Posts' : `${profile.username}'s Posts`}
+            </h2>
 
-        {posts.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 sm:p-20 text-center shadow-sm border border-slate-100 dark:border-slate-800">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 dark:bg-slate-800 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <UserIcon size={24} className="sm:w-8 sm:h-8 text-slate-300 dark:text-slate-600" />
-            </div>
-            <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
-              {isOwnProfile ? t('community.noPosts') : t('community.noPosts')}
-            </p>
-          </div>
-        ) : (
-          <div className="w-full space-y-4 sm:space-y-6">
-            {posts.map((post) => (
-              <PostCard 
-                key={post._id} 
-                post={post} 
-                currentUser={currentUser}
-                onDelete={(postId) => {
-                  setPosts(posts.filter(p => p._id !== postId));
-                  clearCache(`/users/${username}`);
-                }}
-              />
-            ))}
-          </div>
+            {posts.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 sm:p-20 text-center shadow-sm border border-slate-100 dark:border-slate-800">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 dark:bg-slate-800 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <UserIcon size={24} className="sm:w-8 sm:h-8 text-slate-300 dark:text-slate-600" />
+                </div>
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+                  {isOwnProfile ? t('community.noPosts') : t('community.noPosts')}
+                </p>
+              </div>
+            ) : (
+              <div className="w-full space-y-4 sm:space-y-6">
+                {posts.map((post) => (
+                  <PostCard 
+                    key={post._id} 
+                    post={post} 
+                    currentUser={currentUser}
+                    onDelete={(postId) => {
+                      setPosts(posts.filter(p => p._id !== postId));
+                      clearCache(`/users/${username}`);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'saved' && isOwnProfile && (
+          <>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 px-1">
+              Saved Posts
+            </h2>
+
+            {savedPosts.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 sm:p-20 text-center shadow-sm border border-slate-100 dark:border-slate-800">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 dark:bg-slate-800 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <Bookmark size={24} className="sm:w-8 sm:h-8 text-slate-300 dark:text-slate-600" />
+                </div>
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">
+                  No saved posts yet
+                </p>
+              </div>
+            ) : (
+              <div className="w-full space-y-4 sm:space-y-6">
+                {savedPosts.map((post) => (
+                  <PostCard 
+                    key={post._id} 
+                    post={post} 
+                    currentUser={currentUser}
+                    onDelete={(postId) => {
+                      setSavedPosts(savedPosts.filter(p => p._id !== postId));
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -375,7 +471,7 @@ function EditProfileModal({ profile, onClose, onUpdate }) {
     try {
       setLoading(true);
       const res = await API.put('/users/profile', formData);
-      clearCache('/users/'); // Clear all user caches
+      clearCache('/users/');
       toast.success(t('common.success'));
       onUpdate(res.data);
     } catch {

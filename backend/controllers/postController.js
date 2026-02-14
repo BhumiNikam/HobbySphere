@@ -1,10 +1,22 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
+const Community = require('../models/Community');
 const cloudinary = require('../config/cloudinary');
 const { createNotification } = require('../utils/notifications');
 
 /* =====================================================
-   CREATE POST
+   HELPER: Get media type from mimetype
+===================================================== */
+const getMediaType = (mimetype) => {
+  if (mimetype.startsWith('image/')) return 'image';
+  if (mimetype.startsWith('video/')) return 'video';
+  if (mimetype.startsWith('audio/')) return 'audio';
+  if (mimetype === 'application/pdf') return 'pdf';
+  return 'document';
+};
+
+/* =====================================================
+   CREATE POST - MULTI-MEDIA SUPPORT
 ===================================================== */
 exports.createPost = async (req, res) => {
   try {
@@ -14,59 +26,63 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ message: 'Post content is required' });
     }
 
-    // ✅ Community is now OPTIONAL - allow posting to profile
-    // If communityId is provided, validate it exists
+    // ✅ Validate community membership if posting to community
     if (communityId) {
-      const Community = require('../models/Community');
-      const communityExists = await Community.findById(communityId);
-      if (!communityExists) {
+      const community = await Community.findById(communityId);
+      if (!community) {
         return res.status(404).json({ message: 'Community not found' });
+      }
+      
+      // Check if user is a member
+      if (!community.members.includes(req.user._id)) {
+        return res.status(403).json({ message: 'You must join the community to post' });
       }
     }
 
-    /* ===== UPLOAD MEDIA ===== */
-    const images = [];
+    /* ===== UPLOAD MEDIA - ALL TYPES ===== */
+    const media = [];
 
     if (req.files?.length) {
       const uploads = req.files.map(
         (file) =>
           new Promise((resolve, reject) => {
-            const isVideo = file.mimetype.startsWith('video/');
+            const mediaType = getMediaType(file.mimetype);
+            const resourceType = ['image', 'video'].includes(mediaType) ? mediaType : 'raw';
+            
             cloudinary.uploader
               .upload_stream({ 
                 folder: 'hobbysphere',
-                resource_type: isVideo ? 'video' : 'image'
+                resource_type: resourceType,
+                format: mediaType === 'audio' ? 'mp3' : undefined
               }, (err, result) => {
                 if (err) reject(err);
-                else resolve(result);
+                else resolve({
+                  url: result.secure_url,
+                  publicId: result.public_id,
+                  type: mediaType,
+                  fileName: file.originalname,
+                  fileSize: file.size,
+                  mimeType: file.mimetype
+                });
               })
               .end(file.buffer);
           })
       );
 
       const results = await Promise.all(uploads);
-
-      results.forEach((r) =>
-        images.push({ 
-          url: r.secure_url, 
-          publicId: r.public_id,
-          type: r.resource_type // 'image' or 'video'
-        })
-      );
+      media.push(...results);
     }
 
     /* ===== HASHTAGS ===== */
     const hashtags = content.match(/#([\w-]+)/g) || [];
 
-    // ✅ Create post with optional community
     const postData = {
       content,
       author: req.user._id,
-      images,
+      media,
       hashtags: hashtags.map((t) => t.toLowerCase()),
     };
 
-    // Only add community if provided
     if (communityId) {
       postData.community = communityId;
     }
@@ -77,9 +93,16 @@ exports.createPost = async (req, res) => {
       .populate('author', 'username fullName profileImage')
       .populate('community', 'name slug');
 
-    /* ===== SOCKET ===== */
+    /* ===== REAL-TIME UPDATE ===== */
     const io = req.app.get('io');
-    io?.emit('post_created', populatedPost);
+    if (io) {
+      io.emit('post_created', populatedPost);
+      
+      // Emit to specific community room if applicable
+      if (communityId) {
+        io.to(`community:${communityId}`).emit('community_post_created', populatedPost);
+      }
+    }
 
     res.status(201).json(populatedPost);
   } catch (error) {
@@ -89,8 +112,7 @@ exports.createPost = async (req, res) => {
 };
 
 /* =====================================================
-   HOME FEED - ALL POSTS FROM ALL USERS
-   ✅ Shows ALL posts regardless of community or following status
+   HOME FEED
 ===================================================== */
 exports.getFeed = async (req, res) => {
   try {
@@ -98,7 +120,6 @@ exports.getFeed = async (req, res) => {
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // ✅ Get ALL posts from ALL users
     const [posts, total] = await Promise.all([
       Post.find({})
         .populate('author', 'username fullName profileImage')
@@ -121,7 +142,6 @@ exports.getFeed = async (req, res) => {
 
 /* =====================================================
    FOLLOWING FEED
-   ✅ Shows only posts from users you follow
 ===================================================== */
 exports.getFollowingFeed = async (req, res) => {
   try {
@@ -175,11 +195,9 @@ exports.likePost = async (req, res) => {
     );
 
     if (alreadyLiked) {
-      // UNLIKE
       post.likes.pull(userId);
       await post.save();
 
-      // Emit unlike event
       io?.emit('post_unliked', {
         postId: post._id,
         userId: userId.toString(),
@@ -191,18 +209,15 @@ exports.likePost = async (req, res) => {
         isLiked: false,
       });
     } else {
-      // LIKE
       post.likes.addToSet(userId);
       await post.save();
 
-      // Emit like event
       io?.emit('post_liked', {
         postId: post._id,
         userId: userId.toString(),
         likesCount: post.likes.length,
       });
 
-      // Create notification (don't notify self)
       if (post.author.toString() !== userId.toString()) {
         await createNotification(io, userSockets, {
           type: 'like',
@@ -238,9 +253,12 @@ exports.deletePost = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
+    // Delete all media from cloudinary
     await Promise.all(
-      post.images.map((img) =>
-        cloudinary.uploader.destroy(img.publicId).catch(() => {})
+      post.media.map((item) =>
+        cloudinary.uploader.destroy(item.publicId, {
+          resource_type: ['image', 'video'].includes(item.type) ? item.type : 'raw'
+        }).catch(() => {})
       )
     );
 
@@ -251,6 +269,35 @@ exports.deletePost = async (req, res) => {
 
     res.json({ message: 'Post deleted' });
   } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/* =====================================================
+   DOWNLOAD POST MEDIA
+===================================================== */
+exports.downloadMedia = async (req, res) => {
+  try {
+    const { postId, mediaIndex } = req.params;
+    
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    const mediaItem = post.media[parseInt(mediaIndex)];
+    if (!mediaItem) {
+      return res.status(404).json({ message: 'Media not found' });
+    }
+
+    // Return download URL
+    res.json({
+      url: mediaItem.url,
+      fileName: mediaItem.fileName || `download.${mediaItem.type}`,
+      type: mediaItem.type
+    });
+  } catch (error) {
+    console.error('Download error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

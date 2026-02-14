@@ -1,11 +1,13 @@
 // frontend/src/pages/MyCommunities.jsx
 import { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API from '../services/api';
+import { X } from 'lucide-react';
 
 export default function MyCommunities() {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +30,15 @@ export default function MyCommunities() {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex"
+        title="Go back"
+      >
+        <X size={24} className="text-slate-700 dark:text-slate-300" />
+      </button>
+      
       <h1 className="text-3xl font-bold mb-8">My Communities</h1>
       
       {communities.length === 0 ? (

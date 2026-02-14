@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API, { clearCache } from '../services/api';
 import toast from 'react-hot-toast';
-import { Check, Users, Crown } from 'lucide-react';
+import { Check, Users, Crown, X } from 'lucide-react';
 
 export default function Communities() {
   const navigate = useNavigate();
@@ -208,19 +208,29 @@ export default function Communities() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text">
-            Discover Communities
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Find people who share your interests
-          </p>
-        </div>
+      <div className="flex items-start gap-4 mb-10">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0 mt-1"
+          title="Go back"
+        >
+          <X size={24} className="text-slate-700 dark:text-slate-300" />
+        </button>
+        
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-1">
+          <div>
+            <h1 className="text-3xl font-bold gradient-text">
+              Discover Communities
+            </h1>
+            <p className="text-slate-500 mt-1">
+              Find people who share your interests
+            </p>
+          </div>
 
-        <Link to="/communities/create" className="btn-gradient ripple">
-          + Create Community
-        </Link>
+          <Link to="/communities/create" className="btn-gradient ripple flex-shrink-0">
+            + Create Community
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-10 flex flex-col md:flex-row gap-4">

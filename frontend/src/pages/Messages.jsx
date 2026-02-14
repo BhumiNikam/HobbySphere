@@ -9,11 +9,13 @@ import { MessageCircle, X, ArrowLeft } from 'lucide-react';
 export default function Messages() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { socket, fetchUnreadMessageCount } = useSocket();
+  
   const [conversations, setConversations] = useState([]);
   const [followingUsers, setFollowingUsers] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { fetchUnreadMessageCount } = useSocket();
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -30,22 +32,50 @@ export default function Messages() {
     }
   }, [selectedConversation]);
 
+  /* ================= REAL-TIME FOLLOW/UNFOLLOW UPDATES ================= */
+  useEffect(() => {
+    if (!socket || !currentUserId) return;
+
+    const handleUserFollowed = ({ followedUserId, followerUserId }) => {
+      // If current user followed someone, refresh the following list
+      if (followerUserId === currentUserId) {
+        fetchData();
+      }
+    };
+
+    const handleUserUnfollowed = ({ unfollowedUserId, unfollowerUserId }) => {
+      // If current user unfollowed someone, refresh the following list
+      if (unfollowerUserId === currentUserId) {
+        fetchData();
+      }
+    };
+
+    socket.on('user_followed', handleUserFollowed);
+    socket.on('user_unfollowed', handleUserUnfollowed);
+
+    return () => {
+      socket.off('user_followed', handleUserFollowed);
+      socket.off('user_unfollowed', handleUserUnfollowed);
+    };
+  }, [socket, currentUserId]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      // ✅ PARALLEL API CALLS
-      const [conversationsRes, followingRes] = await Promise.all([
+      const [conversationsRes, meRes] = await Promise.all([
         api.get('/messages/conversations'),
         api.get('/auth/me')
       ]);
 
       setConversations(conversationsRes.data);
       
-      const currentUserId = followingRes.data.user._id || followingRes.data.user.id;
-      const following = followingRes.data.user.following || [];
+      const userId = meRes.data.user._id || meRes.data.user.id;
+      setCurrentUserId(userId);
+      
+      const following = meRes.data.user.following || [];
       const conversationUserIds = conversationsRes.data.map(conv => 
-        conv.participants.find(p => p._id !== currentUserId)?._id
+        conv.participants.find(p => p._id !== userId)?._id
       ).filter(Boolean);
       
       const followingWithoutConversations = following.filter(
@@ -124,7 +154,7 @@ export default function Messages() {
   if (loading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="spinner" />
+        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     );
   }

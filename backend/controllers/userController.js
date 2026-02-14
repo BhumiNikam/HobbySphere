@@ -51,7 +51,7 @@ exports.getUserPosts = async (req, res) => {
   }
 };
 
-// Follow/Unfollow user
+// ✅ Follow/Unfollow user - WITH REAL-TIME SOCKET EVENTS
 exports.followUser = async (req, res) => {
   try {
     const userToFollow = await User.findById(req.params.userId);
@@ -64,18 +64,35 @@ exports.followUser = async (req, res) => {
     const currentUser = await User.findById(req.user._id);
     const isFollowing = currentUser.following.includes(req.params.userId);
 
+    const io = req.app.get('io');
+    const userSockets = req.app.get('userSockets');
+
     if (isFollowing) {
       // Unfollow
       currentUser.following = currentUser.following.filter(id => id.toString() !== req.params.userId);
       userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== req.user._id.toString());
+
+      // ✅ Emit unfollow event for real-time updates
+      if (io) {
+        io.emit('user_unfollowed', {
+          unfollowedUserId: req.params.userId,
+          unfollowerUserId: req.user._id.toString()
+        });
+      }
     } else {
       // Follow
       currentUser.following.push(req.params.userId);
       userToFollow.followers.push(req.user._id);
 
+      // ✅ Emit follow event for real-time updates
+      if (io) {
+        io.emit('user_followed', {
+          followedUserId: req.params.userId,
+          followerUserId: req.user._id.toString()
+        });
+      }
+
       // Send notification
-      const io = req.app.get('io');
-      const userSockets = req.app.get('userSockets');
       await createNotification(io, userSockets, {
         type: 'follow',
         from: req.user._id,

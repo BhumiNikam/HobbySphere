@@ -5,6 +5,7 @@ const {
   getFollowingFeed,
   likePost,
   deletePost,
+  downloadMedia,
 } = require('../controllers/postController');
 
 const auth = require('../middleware/auth');
@@ -14,22 +15,20 @@ const { postLimiter } = require('../middleware/rateLimiter');
 const router = express.Router();
 
 /* =====================================================
-   CREATE POST
+   CREATE POST - MULTI-MEDIA SUPPORT
 ===================================================== */
 router.post(
   '/',
   auth,
   postLimiter,
-  upload.array('images', 4),
+  upload.array('media', 10), // Changed from 'images' to 'media'
   createPost
 );
 
 /* =====================================================
    FEEDS
 ===================================================== */
-// ✅ FIX: Add route for /api/posts (For You feed - all posts)
 router.get('/', auth, getFeed);
-
 router.get('/feed', auth, getFeed);
 router.get('/feed/following', auth, getFollowingFeed);
 
@@ -38,5 +37,10 @@ router.get('/feed/following', auth, getFollowingFeed);
 ===================================================== */
 router.post('/:postId/like', auth, likePost);
 router.delete('/:postId', auth, deletePost);
+
+/* =====================================================
+   DOWNLOAD MEDIA
+===================================================== */
+router.get('/:postId/download/:mediaIndex', auth, downloadMedia);
 
 module.exports = router;

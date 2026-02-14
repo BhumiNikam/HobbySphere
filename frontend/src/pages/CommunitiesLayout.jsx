@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import PostCard from '../components/PostCard';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ const postsCache = new Map();
 export default function CommunitiesLayout() {
   const { user } = useContext(AuthContext);
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [myCommunities, setMyCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
@@ -66,6 +67,15 @@ export default function CommunitiesLayout() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => navigate('/communities')}
+        className="mb-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex"
+        title="Go back"
+      >
+        <X size={24} className="text-slate-700 dark:text-slate-300" />
+      </button>
+      
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
         {/* MAIN CONTENT */}
         <div className="w-full space-y-6 min-w-0">

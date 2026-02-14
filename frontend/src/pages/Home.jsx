@@ -9,7 +9,7 @@ import PostSkeleton from '../components/ui/PostSkeleton';
 import RightSidebar from '../components/sidebar/RightSidebar';
 
 const SEEN_POSTS_KEY = 'hobbysphere_seen_home_posts';
-const LIMIT = 15; // ✅ Load more posts per request
+const LIMIT = 15;
 
 function FeedSkeleton() {
   return (
@@ -88,24 +88,52 @@ export default function Home() {
     }
   }, [posts]);
 
+  /* ================= REAL-TIME SOCKET LISTENERS ================= */
   useEffect(() => {
     if (!socket) return;
 
-    const onPostCreated = () => {
+    const onPostCreated = (newPost) => {
       if (window.scrollY > 200) {
         setHasNewPosts(true);
       } else {
-        handleRefresh();
+        // Add post to top if user is at top of page
+        setPosts((prev) => {
+          if (!prev) return [newPost];
+          // Avoid duplicates
+          if (prev.some(p => p._id === newPost._id)) return prev;
+          return [newPost, ...prev];
+        });
+        clearCache('/posts');
       }
     };
 
+    const onPostDeleted = ({ postId }) => {
+      setPosts((prev) => (prev || []).filter((p) => p._id !== postId));
+      setSeenPosts((prev) => {
+        const updated = new Set(prev);
+        updated.delete(postId);
+        return updated;
+      });
+      clearCache('/posts');
+    };
+
     socket.on('post_created', onPostCreated);
-    return () => socket.off('post_created', onPostCreated);
+    socket.on('post_deleted', onPostDeleted);
+
+    return () => {
+      socket.off('post_created', onPostCreated);
+      socket.off('post_deleted', onPostDeleted);
+    };
   }, [socket]);
 
+  // Legacy event listener for compatibility
   useEffect(() => {
     const onPostCreated = (e) => {
-      setPosts((prev) => [e.detail, ...(prev || [])]);
+      setPosts((prev) => {
+        if (!prev) return [e.detail];
+        if (prev.some(p => p._id === e.detail._id)) return prev;
+        return [e.detail, ...prev];
+      });
       setHasNewPosts(false);
       clearCache('/posts');
     };
@@ -168,7 +196,7 @@ export default function Home() {
           loadFeed(page + 1);
         }
       },
-      { threshold: 1, rootMargin: '400px' } // ✅ Load earlier
+      { threshold: 1, rootMargin: '400px' }
     );
 
     if (loadMoreRef.current) {
