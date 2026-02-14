@@ -10,7 +10,7 @@ router.use(auth);
 // Community CRUD
 router.post('/', upload.fields([{ name: 'coverImage', maxCount: 1 }]), communityController.createCommunity);
 router.get('/', communityController.getCommunities);
-router.get('/suggestions', communityController.getCommunitySuggestions);
+router.get('/suggestions', communityController.getSuggestedCommunities);
 router.get('/my-communities', communityController.getUserCommunities);
 router.get('/:id', communityController.getCommunity);
 router.put('/:id', communityController.updateCommunity);
