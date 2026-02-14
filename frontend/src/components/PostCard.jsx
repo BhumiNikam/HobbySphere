@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CommentSection from './CommentSection';
 import MediaRenderer from './MediaRenderer';
+import ConfirmDialog from './ConfirmDialog';
 import {
   Heart,
   MessageCircle,
@@ -42,6 +43,7 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
   const [showMenu, setShowMenu] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [likeBurst, setLikeBurst] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     if (!socket) return;
@@ -153,15 +155,26 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
   }, [post._id, isLiked, isMember]);
 
   const handleDelete = useCallback(async () => {
-    if (!window.confirm(t('post.delete') + '?')) return;
     try {
+      // Show loading state
+      const loadingToast = toast.loading('Deleting post...');
+      
       await API.delete(`/posts/${post._id}`);
       onDelete?.(post._id);
-      toast.success('Post deleted');
-    } catch {
-      toast.error('Failed to delete post');
+      
+      // Dismiss loading and show success
+      toast.dismiss(loadingToast);
+      toast.success('Post deleted successfully', {
+        icon: '🗑️',
+        duration: 3000,
+      });
+    } catch (err) {
+      toast.error('Failed to delete post. Please try again.', {
+        duration: 4000,
+      });
+      console.error('Delete error:', err);
     }
-  }, [post._id, onDelete, t]);
+  }, [post._id, onDelete]);
 
   const handleBookmark = useCallback(async () => {
     try {
@@ -311,7 +324,10 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
               <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-100 dark:border-slate-800
                               overflow-hidden z-20 animate-scale-in">
                 <button
-                  onClick={handleDelete}
+                  onClick={() => {
+                    setShowMenu(false);
+                    setShowDeleteDialog(true);
+                  }}
                   className="flex items-center gap-2.5 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full 
                              transition-colors"
                 >
@@ -469,6 +485,18 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
           />
         </div>
       )}
+
+      {/* DELETE CONFIRMATION DIALOG */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="Delete Post"
+        message="Are you sure you want to delete this post? This action cannot be undone and all comments will be lost."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </article>
   );
 });

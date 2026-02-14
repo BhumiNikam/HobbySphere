@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import API from '../services/api';
 import PostCard from '../components/PostCard';
 import PostForm from '../components/PostForm';
+import ConfirmDialog from '../components/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { Info, Trash2, Users as UsersIcon, TrendingUp, Tag, Crown, LogOut, X } from 'lucide-react';
 
@@ -61,7 +62,6 @@ export default function CommunityPage() {
     const handleMemberJoined = ({ communityId, userId, memberCount }) => {
       if (communityId === id) {
         setCommunity(prev => ({ ...prev, memberCount }));
-        // ✅ If current user joined, update isMember immediately
         if (userId === user._id) {
           setIsMember(true);
         }
@@ -94,7 +94,6 @@ export default function CommunityPage() {
     socket.on('community_member_left', handleMemberLeft);
     socket.on('community_updated', handleCommunityUpdated);
 
-    // Join community room for real-time updates
     socket.emit('join_community', id);
 
     return () => {
@@ -148,11 +147,16 @@ export default function CommunityPage() {
   };
 
   const handleJoin = async () => {
+    const loadingToast = toast.loading('Joining community...');
+    
     try {
       await API.post(`/communities/${id}/join`);
-      toast.success(t('community.joined') || 'Joined community!');
       
-      // ✅ Update UI immediately without waiting for socket or refresh
+      toast.success(t('community.joined') || 'Welcome to the community! 🎉', { 
+        id: loadingToast,
+        duration: 3000,
+      });
+      
       setIsMember(true);
       setCommunity(prev => ({
         ...prev,
@@ -161,20 +165,27 @@ export default function CommunityPage() {
       
       communityCache.delete(id);
       await refreshUser();
-      // Don't call fetchCommunity here - we already updated the UI
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to join');
+      toast.error(error.response?.data?.error || 'Failed to join community', { 
+        id: loadingToast,
+        duration: 4000,
+      });
     }
   };
 
   const handleLeave = async () => {
+    const loadingToast = toast.loading('Leaving community...');
+    
     try {
       await API.post(`/communities/${id}/leave`);
-      toast.success(t('community.left') || 'Left community');
       
-      // ✅ Update UI immediately
+      toast.success(t('community.left') || 'You have left the community', { 
+        id: loadingToast,
+        icon: '👋',
+        duration: 3000,
+      });
+      
       setIsMember(false);
-      setShowLeaveConfirm(false);
       setCommunity(prev => ({
         ...prev,
         memberCount: Math.max((prev?.memberCount || 1) - 1, 0)
@@ -183,18 +194,32 @@ export default function CommunityPage() {
       communityCache.delete(id);
       await refreshUser();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to leave');
+      toast.error(error.response?.data?.message || 'Failed to leave community', { 
+        id: loadingToast,
+        duration: 4000,
+      });
     }
   };
 
   const handleDeleteCommunity = async () => {
+    const loadingToast = toast.loading('Deleting community...');
+    
     try {
       await API.delete(`/communities/${id}`);
       communityCache.delete(id);
-      toast.success(t('community.deleted') || 'Community deleted successfully');
+      
+      toast.success(t('community.deleted') || 'Community deleted successfully', { 
+        id: loadingToast,
+        icon: '🗑️',
+        duration: 3000,
+      });
+      
       navigate('/communities');
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to delete community');
+      toast.error(error.response?.data?.error || 'Failed to delete community', { 
+        id: loadingToast,
+        duration: 4000,
+      });
     }
   };
 
@@ -247,7 +272,7 @@ export default function CommunityPage() {
         }} />
         
         <div className="p-6">
-          {/* CREATOR INFO - ALWAYS VISIBLE */}
+          {/* CREATOR INFO */}
           <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100 dark:border-slate-700">
             <img
               src={community.creator?.profileImage || `https://ui-avatars.com/api/?name=${community.creator?.fullName}&background=6366f1&color=fff`}
@@ -261,7 +286,6 @@ export default function CommunityPage() {
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">@{community.creator?.username} • Creator & Admin</p>
             </div>
-            {/* DELETE BUTTON - ONLY FOR CREATOR */}
             {isCreator && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
@@ -391,72 +415,38 @@ export default function CommunityPage() {
         </div>
       </div>
 
-      {/* LEAVE CONFIRMATION MODAL */}
-      {showLeaveConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 p-6">
-            <div className="text-center space-y-4">
-              <div className="text-5xl">👋</div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Leave Community?</h3>
-              <p className="text-slate-600 dark:text-slate-400">
-                You will no longer see posts from this community and will need to rejoin to participate.
-              </p>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setShowLeaveConfirm(false)}
-                  className="flex-1 px-4 py-3 rounded-xl font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleLeave}
-                  className="flex-1 px-4 py-3 rounded-xl font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
-                >
-                  Leave
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* LEAVE CONFIRMATION DIALOG */}
+      <ConfirmDialog
+        isOpen={showLeaveConfirm}
+        onClose={() => setShowLeaveConfirm(false)}
+        onConfirm={handleLeave}
+        title="Leave Community"
+        message="You will no longer see posts from this community and will need to rejoin to participate again. Are you sure?"
+        confirmText="Leave"
+        cancelText="Stay"
+        type="warning"
+      />
 
-      {/* DELETE CONFIRMATION MODAL */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 p-6">
-            <div className="text-center space-y-4">
-              <div className="text-5xl">🗑️</div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Delete Community?</h3>
-              <p className="text-slate-600 dark:text-slate-400">
-                This action cannot be undone. All posts and data will be permanently deleted.
-              </p>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-3 rounded-xl font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteCommunity}
-                  className="flex-1 px-4 py-3 rounded-xl font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* DELETE CONFIRMATION DIALOG */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteCommunity}
+        title="Delete Community"
+        message="This action cannot be undone. All posts, members, and community data will be permanently deleted. Are you absolutely sure?"
+        confirmText="Delete Permanently"
+        cancelText="Cancel"
+        type="danger"
+      />
 
-      {/* POST FORM - ✅ ONLY FOR MEMBERS */}
+      {/* POST FORM */}
       {isMember && (
         <div className="mb-8">
           <PostForm onPostCreated={handlePostCreated} communityId={id} />
         </div>
       )}
 
-      {/* ✅ JOIN PROMPT FOR NON-MEMBERS */}
+      {/* JOIN PROMPT FOR NON-MEMBERS */}
       {!isMember && (
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 p-8 mb-8 text-center">
           <div className="text-5xl mb-4">🔒</div>
@@ -475,7 +465,7 @@ export default function CommunityPage() {
         </div>
       )}
 
-      {/* POSTS LIST - ✅ PASS isMember TO PostCard */}
+      {/* POSTS LIST */}
       <div className="w-full space-y-6">
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
           Posts

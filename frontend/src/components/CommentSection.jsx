@@ -3,6 +3,8 @@ import { Trash2, Send, MessageCircle, Heart, MoreVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../context/SocketContext';
 import API from '../services/api';
+import ConfirmDialog from './ConfirmDialog';
+import toast from 'react-hot-toast';
 
 export default function CommentSection({
   postId,
@@ -17,6 +19,7 @@ export default function CommentSection({
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(initialCommentCount || 0);
   const [expandedMenuId, setExpandedMenuId] = useState(null);
+  const [commentToDelete, setCommentToDelete] = useState(null);
 
   const inputRef = useRef(null);
   const menuRef = useRef(null);
@@ -88,21 +91,31 @@ export default function CommentSection({
       const res = await API.post(`/posts/${postId}/comments`, { text: newComment });
       setComments((prev) => [res.data, ...prev]);
       setNewComment('');
+      toast.success('Comment added', { duration: 2000 });
+    } catch (err) {
+      toast.error('Failed to add comment');
     } finally {
       setLoading(false);
     }
   };
 
   /* ================= DELETE COMMENT ================= */
-  const handleDelete = async (commentId) => {
-    if (!window.confirm('Delete this comment?')) return;
+  const handleDelete = async () => {
+    if (!commentToDelete) return;
 
+    const loadingToast = toast.loading('Deleting comment...');
+    
     try {
-      await API.delete(`/posts/comments/${commentId}`);
-      setComments((prev) => prev.filter((c) => c._id !== commentId));
+      await API.delete(`/posts/comments/${commentToDelete}`);
+      setComments((prev) => prev.filter((c) => c._id !== commentToDelete));
       setExpandedMenuId(null);
-    } catch {
-      console.error('Delete comment failed');
+      
+      toast.success('Comment deleted', { id: loadingToast });
+    } catch (err) {
+      toast.error('Failed to delete comment', { id: loadingToast });
+      console.error('Delete comment failed:', err);
+    } finally {
+      setCommentToDelete(null);
     }
   };
 
@@ -297,7 +310,10 @@ export default function CommentSection({
                                 animate-scale-in
                               ">
                                 <button
-                                  onClick={() => handleDelete(comment._id)}
+                                  onClick={() => {
+                                    setCommentToDelete(comment._id);
+                                    setExpandedMenuId(null);
+                                  }}
                                   className="
                                     w-full flex items-center gap-2
                                     px-4 py-2.5
@@ -333,6 +349,18 @@ export default function CommentSection({
           </div>
         </div>
       )}
+
+      {/* DELETE CONFIRMATION DIALOG */}
+      <ConfirmDialog
+        isOpen={!!commentToDelete}
+        onClose={() => setCommentToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { X, Upload, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import API from '../services/api';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function ImageUploadModal({
   type,
@@ -12,6 +13,7 @@ export default function ImageUploadModal({
   const [preview, setPreview] = useState(null);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -53,6 +55,8 @@ export default function ImageUploadModal({
     if (!file || uploading) return;
 
     setUploading(true);
+    const loadingToast = toast.loading('Uploading image...');
+
     try {
       const formData = new FormData();
       formData.append('image', file);
@@ -61,11 +65,18 @@ export default function ImageUploadModal({
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      toast.success(res.data.message || 'Image updated');
+      toast.success(res.data.message || 'Image updated successfully', { 
+        id: loadingToast,
+        icon: '✅',
+        duration: 3000,
+      });
       onUpdate(isProfile ? res.data.profileImage : res.data.coverImage);
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Upload failed');
+      toast.error(err.response?.data?.message || 'Upload failed', { 
+        id: loadingToast,
+        duration: 4000,
+      });
     } finally {
       setUploading(false);
     }
@@ -73,17 +84,23 @@ export default function ImageUploadModal({
 
   /* ================= REMOVE ================= */
   const handleRemove = async () => {
-    if (!window.confirm(`Remove ${isProfile ? 'profile picture' : 'cover image'}?`))
-      return;
-
     setUploading(true);
+    const loadingToast = toast.loading('Removing image...');
+
     try {
       await API.delete(deleteEndpoint);
-      toast.success('Image removed');
+      toast.success('Image removed successfully', { 
+        id: loadingToast,
+        icon: '🗑️',
+        duration: 3000,
+      });
       onUpdate('');
       onClose();
-    } catch {
-      toast.error('Failed to remove image');
+    } catch (err) {
+      toast.error('Failed to remove image', { 
+        id: loadingToast,
+        duration: 4000,
+      });
     } finally {
       setUploading(false);
     }
@@ -97,17 +114,17 @@ export default function ImageUploadModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 animate-scale-in"
+        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-6 animate-scale-in border border-slate-200 dark:border-slate-800"
       >
         {/* HEADER */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{title}</h2>
           <button
             onClick={onClose}
             disabled={uploading}
-            className="p-2 rounded-full hover:bg-slate-100 transition"
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
           >
-            <X size={20} />
+            <X size={20} className="text-slate-700 dark:text-slate-300" />
           </button>
         </div>
 
@@ -118,7 +135,7 @@ export default function ImageUploadModal({
               <img
                 src={preview || currentImage}
                 alt="Preview"
-                className={`w-full rounded-xl object-cover ${
+                className={`w-full rounded-xl object-cover border border-slate-200 dark:border-slate-700 ${
                   isProfile ? 'h-64' : 'h-48'
                 }`}
               />
@@ -139,15 +156,15 @@ export default function ImageUploadModal({
           ) : (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed border-slate-300 rounded-xl
+              className={`border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl
                 flex flex-col items-center justify-center cursor-pointer
-                hover:border-indigo-500 hover:bg-indigo-50/30 transition
+                hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition
                 ${isProfile ? 'h-64' : 'h-48'}
               `}
             >
-              <Upload size={42} className="text-slate-400 mb-2" />
-              <p className="font-medium text-slate-700">Click to select image</p>
-              <p className="text-xs text-slate-400 mt-1">Max size 5MB</p>
+              <Upload size={42} className="text-slate-400 dark:text-slate-500 mb-2" />
+              <p className="font-medium text-slate-700 dark:text-slate-300">Click to select image</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Max size 5MB</p>
             </div>
           )}
         </div>
@@ -166,7 +183,7 @@ export default function ImageUploadModal({
           {!preview && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 btn-secondary"
+              className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
               disabled={uploading}
             >
               Choose Image
@@ -177,7 +194,7 @@ export default function ImageUploadModal({
             <button
               onClick={handleUpload}
               disabled={uploading}
-              className="flex-1 btn-primary"
+              className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {uploading ? 'Uploading…' : 'Upload'}
             </button>
@@ -185,11 +202,11 @@ export default function ImageUploadModal({
 
           {currentImage && !preview && (
             <button
-              onClick={handleRemove}
+              onClick={() => setShowRemoveDialog(true)}
               disabled={uploading}
-              className="flex-1 bg-red-500 text-white rounded-xl py-3 font-semibold hover:bg-red-600 transition"
+              className="flex-1 bg-red-500 text-white rounded-xl py-3 font-medium hover:bg-red-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Trash2 size={16} className="inline mr-1" />
+              <Trash2 size={16} />
               Remove
             </button>
           )}
@@ -197,12 +214,24 @@ export default function ImageUploadModal({
           <button
             onClick={onClose}
             disabled={uploading}
-            className="flex-1 btn-secondary"
+            className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
         </div>
       </div>
+
+      {/* REMOVE CONFIRMATION DIALOG */}
+      <ConfirmDialog
+        isOpen={showRemoveDialog}
+        onClose={() => setShowRemoveDialog(false)}
+        onConfirm={handleRemove}
+        title={`Remove ${isProfile ? 'Profile Picture' : 'Cover Image'}`}
+        message={`Are you sure you want to remove your ${isProfile ? 'profile picture' : 'cover image'}? ${isProfile ? 'Your profile will show a default avatar.' : 'Your profile will show the default cover.'}`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        type="warning"
+      />
     </div>
   );
 }
