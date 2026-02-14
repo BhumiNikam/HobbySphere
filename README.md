@@ -16,7 +16,7 @@ A full-stack real-time social platform where users can create communities, share
 
 🛠 Tech Stack
 Frontend: React (Vite), Tailwind CSS, Axios, Socket.io
-Backend: Node.js, Express, MongoDB (Mongoose), JWT
+Backend: Node.js, Express, MongoDB (Mongoose), JWT  
 Cloud: MongoDB Atlas, Render, Vercel, Cloudinary
 
 🏗 Architecture
