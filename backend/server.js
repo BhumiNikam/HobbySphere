@@ -12,6 +12,10 @@ const connectDB = require('./config/db');
 dotenv.config();
 
 const app = express();
+
+// ✅ FIX: Trust proxy for rate limiting on Render/production
+app.set('trust proxy', 1);
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
