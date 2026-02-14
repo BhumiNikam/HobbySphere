@@ -350,3 +350,30 @@ const getFileExtension = (mediaItem) => {
   
   return typeMap[mediaItem.type] || 'bin';
 };
+
+/* =====================================================
+   GET SINGLE POST BY ID - FOR SHARED LINKS
+===================================================== */
+exports.getPostById = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    
+    console.log('📖 Fetching post:', postId);
+    
+    const post = await Post.findById(postId)
+      .populate('author', 'username fullName profileImage')
+      .populate('community', 'name slug _id');
+
+    if (!post) {
+      console.error('❌ Post not found:', postId);
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    console.log('✅ Post found:', post.content.substring(0, 50) + '...');
+
+    res.json(post);
+  } catch (error) {
+    console.error('❌ Get post error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
