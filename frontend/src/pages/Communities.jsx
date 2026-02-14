@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API, { clearCache } from '../services/api';
 import toast from 'react-hot-toast';
-import { Check, Users } from 'lucide-react';
+import { Check, Users, Crown } from 'lucide-react';
 
 export default function Communities() {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export default function Communities() {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [search, category, user]);
+  }, [search, category]);
 
   const fetchCommunities = async () => {
     try {
@@ -44,19 +44,8 @@ export default function Communities() {
   };
 
   const separateCommunities = (allCommunities) => {
-    const userCommunities = user?.communities || [];
-    const userCommunityIds = userCommunities.map(c => typeof c === 'string' ? c : c._id);
-    
-    const joined = [];
-    const notJoined = [];
-    
-    allCommunities.forEach(community => {
-      if (userCommunityIds.includes(community._id)) {
-        joined.push(community);
-      } else {
-        notJoined.push(community);
-      }
-    });
+    const joined = allCommunities.filter(c => c.isMember);
+    const notJoined = allCommunities.filter(c => !c.isMember);
     
     setJoinedCommunities(joined);
     setCommunities(notJoined);
@@ -72,14 +61,18 @@ export default function Communities() {
         
         const community = joinedCommunities.find(c => c._id === communityId);
         setJoinedCommunities(joinedCommunities.filter(c => c._id !== communityId));
-        if (community) setCommunities([community, ...communities]);
+        if (community) {
+          setCommunities([{ ...community, isMember: false }, ...communities]);
+        }
       } else {
         await API.post(`/communities/${communityId}/join`);
         toast.success('Joined community!');
         
         const community = communities.find(c => c._id === communityId);
         setCommunities(communities.filter(c => c._id !== communityId));
-        if (community) setJoinedCommunities([...joinedCommunities, community]);
+        if (community) {
+          setJoinedCommunities([{ ...community, isMember: true }, ...joinedCommunities]);
+        }
       }
       
       clearCache('/communities');
@@ -134,9 +127,26 @@ export default function Communities() {
           )}
         </div>
 
-        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-4 min-h-[40px]">
+        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-3 min-h-[40px]">
           {community.description}
         </p>
+
+        {/* Admin/Creator Info */}
+        {community.creator && (
+          <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-700">
+            <img
+              src={community.creator.profileImage || `https://ui-avatars.com/api/?name=${community.creator.fullName}&background=6366f1&color=fff`}
+              alt={community.creator.fullName}
+              className="w-6 h-6 rounded-full ring-2 ring-yellow-400"
+            />
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <Crown size={12} className="text-yellow-500 flex-shrink-0" />
+              <span className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                {community.creator.fullName}
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
@@ -227,7 +237,7 @@ export default function Communities() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="skeleton h-64 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+            <div key={i} className="skeleton h-80 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
           ))}
         </div>
       ) : joinedCommunities.length === 0 && communities.length === 0 ? (

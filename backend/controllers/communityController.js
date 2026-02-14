@@ -63,7 +63,7 @@ exports.createCommunity = async (req, res) => {
   }
 };
 
-// ✅ OPTIMIZED: Get all communities
+// ✅ OPTIMIZED: Get all communities with membership info
 exports.getCommunities = async (req, res) => {
   try {
     const { category, search, sort = 'popular', page = 1, limit = 12 } = req.query;
@@ -108,8 +108,16 @@ exports.getCommunities = async (req, res) => {
       Community.countDocuments(query)
     ]);
 
+    // ✅ Add membership info for current user
+    const userId = req.user._id.toString();
+    const communitiesWithMembership = communities.map(community => ({
+      ...community,
+      isMember: community.members.some(m => m.toString() === userId),
+      isCreator: community.creator._id.toString() === userId
+    }));
+
     res.json({
-      communities,
+      communities: communitiesWithMembership,
       total,
       page: parseInt(page),
       pages: Math.ceil(total / limit)
@@ -166,7 +174,7 @@ exports.joinCommunity = async (req, res) => {
     }
 
     if (community.members.includes(req.user._id)) {
-      return res.status(400).json({ error: 'Already a member of this community' });
+      return res.status(400).json({ message: 'Already a member of this community' });
     }
 
     community.members.push(req.user._id);
