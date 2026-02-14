@@ -203,13 +203,21 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
     try {
       const res = await API.get(`/posts/${post._id}/download/${mediaIndex}`);
       
+      // ✅ FIX: Use fetch to get the blob, then download
+      const response = await fetch(res.data.url);
+      const blob = await response.blob();
+      
+      // Create blob URL and trigger download
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = res.data.url;
+      link.href = blobUrl;
       link.download = res.data.fileName;
-      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Clean up blob URL
+      window.URL.revokeObjectURL(blobUrl);
       
       toast.success('Download started');
     } catch (err) {
@@ -409,17 +417,6 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
         >
           <Share2 size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
         </button>
-
-        {/* Download button in actions bar - only show if post has media */}
-        {hasMedia && isMember && (
-          <button
-            onClick={() => handleDownload(0)}
-            className="p-2 sm:p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-green-600 dark:hover:text-green-400 transition-all tap-target"
-            title="Download"
-          >
-            <Download size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
-          </button>
-        )}
 
         <button
           onClick={handleBookmark}

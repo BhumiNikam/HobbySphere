@@ -276,13 +276,13 @@ exports.deletePost = async (req, res) => {
 };
 
 /* =====================================================
-   DOWNLOAD POST MEDIA - ENHANCED WITH BETTER ERROR HANDLING
+   DOWNLOAD POST MEDIA - PROXY DOWNLOAD WITH PROPER HEADERS
 ===================================================== */
 exports.downloadMedia = async (req, res) => {
   try {
     const { postId, mediaIndex } = req.params;
     
-    console.log('📥 Download request:', { postId, mediaIndex }); // Debug log
+    console.log('📥 Download request:', { postId, mediaIndex });
     
     const post = await Post.findById(postId);
     if (!post) {
@@ -295,7 +295,7 @@ exports.downloadMedia = async (req, res) => {
       mediaLength: post.media?.length,
       hasImages: !!post.images,
       imagesLength: post.images?.length
-    }); // Debug log
+    });
 
     // ✅ Support both old 'images' and new 'media' fields
     const mediaArray = post.media?.length ? post.media : post.images || [];
@@ -317,16 +317,36 @@ exports.downloadMedia = async (req, res) => {
       type: mediaItem.type,
       fileName: mediaItem.fileName,
       url: mediaItem.url?.substring(0, 50) + '...'
-    }); // Debug log
+    });
 
-    // Return download URL
+    // ✅ OPTION 1: Return URL with download info (frontend handles download via fetch)
+    // This is better for CORS and works with Cloudinary
     res.json({
       url: mediaItem.url,
-      fileName: mediaItem.fileName || `download-${Date.now()}.${mediaItem.type || 'jpg'}`,
+      fileName: mediaItem.fileName || `hobbysphere-${Date.now()}.${getFileExtension(mediaItem)}`,
       type: mediaItem.type || 'image'
     });
+    
   } catch (error) {
     console.error('❌ Download error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
+};
+
+// Helper function to get file extension
+const getFileExtension = (mediaItem) => {
+  if (mediaItem.fileName) {
+    const ext = mediaItem.fileName.split('.').pop();
+    if (ext && ext.length <= 5) return ext;
+  }
+  
+  const typeMap = {
+    'image': 'jpg',
+    'video': 'mp4',
+    'audio': 'mp3',
+    'pdf': 'pdf',
+    'document': 'pdf'
+  };
+  
+  return typeMap[mediaItem.type] || 'bin';
 };
