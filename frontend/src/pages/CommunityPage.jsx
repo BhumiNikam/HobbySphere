@@ -53,6 +53,8 @@ export default function CommunityPage() {
       });
       
       setCommunity(communityData);
+      console.log('Community data:', communityData);
+      console.log('Creator:', communityData.creator);
       const memberIds = communityData.members.map(m => m.toString());
       setIsMember(memberIds.includes(user._id) || communityData.isMember);
       setIsCreator(communityData.creator._id === user._id || communityData.isCreator);
