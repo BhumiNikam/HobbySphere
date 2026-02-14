@@ -19,14 +19,14 @@ Frontend: React (Vite), Tailwind CSS, Axios, Socket.io
 Backend: Node.js, Express, MongoDB (Mongoose), JWT    
 Cloud: MongoDB Atlas, Render, Vercel, Cloudinary  
 
-🏗 Architecture
-React (Vercel)
-      ↓
-Node + Express (Render)
-      ↓
-MongoDB Atlas
-      ↓
-Cloudinary
+🏗 Architecture  
+React (Vercel)   
+      ↓  
+Node + Express (Render)  
+      ↓  
+MongoDB Atlas  
+      ↓  
+Cloudinary  
 
 🧪 Run Locally  
 Backend  
