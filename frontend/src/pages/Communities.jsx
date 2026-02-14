@@ -15,6 +15,17 @@ export default function Communities() {
   const [category, setCategory] = useState('');
   const [joiningId, setJoiningId] = useState(null);
 
+  // ✅ FIX: Re-fetch when navigating back from deleted community
+  useEffect(() => {
+    const handleFocus = () => {
+      clearCache('/communities');
+      fetchCommunities();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchCommunities();
@@ -30,6 +41,7 @@ export default function Communities() {
       if (category) params.category = category;
 
       setLoading(true);
+      clearCache('/communities'); // ✅ Clear cache before fetching
       const res = await API.get('/communities', { params });
       const data = res.data.communities || [];
       
@@ -131,18 +143,18 @@ export default function Communities() {
           {community.description}
         </p>
 
-        {/* Admin/Creator Info */}
+        {/* Admin/Creator Info - ✅ FIX: Show fullName or username as fallback */}
         {community.creator && (
           <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-700">
             <img
-              src={community.creator.profileImage || `https://ui-avatars.com/api/?name=${community.creator.fullName}&background=6366f1&color=fff`}
-              alt={community.creator.fullName}
+              src={community.creator.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(community.creator.fullName || community.creator.username)}&background=6366f1&color=fff`}
+              alt={community.creator.fullName || community.creator.username}
               className="w-6 h-6 rounded-full ring-2 ring-yellow-400"
             />
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               <Crown size={12} className="text-yellow-500 flex-shrink-0" />
               <span className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                {community.creator.fullName}
+                {community.creator.fullName || community.creator.username}
               </span>
             </div>
           </div>

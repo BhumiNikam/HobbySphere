@@ -102,7 +102,7 @@ export default function CommunityPage() {
       setShowLeaveConfirm(false);
       communityCache.delete(id);
       await refreshUser();
-      navigate('/communities');
+      fetchCommunity();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to leave');
     }
