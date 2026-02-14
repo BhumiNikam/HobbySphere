@@ -44,6 +44,7 @@ const Communities = lazy(() => import('./pages/Communities'));
 const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const CommunitiesLayout = lazy(() => import('./pages/CommunitiesLayout'));
 const CreateCommunity = lazy(() => import('./pages/CreateCommunity'));
+const PostDetail = lazy(() => import('./pages/PostDetail')); // ← ADDED FOR SHARED LINKS
 
 import NotificationBell from './components/NotificationBell';
 import SearchBar from './components/SearchBar';
@@ -441,6 +442,17 @@ export default function App() {
               <Route path="/reset-password/:token" element={<ResetPassword />} />
 
               <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
+              
+              {/* ✅ SHARED POST DETAIL PAGE - MUST BE BEFORE OTHER ROUTES */}
+              <Route path="/post/:postId" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <PostDetail />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
               
               {/* ✅ LAZY LOADED ROUTES */}
               <Route path="/following" element={
