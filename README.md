@@ -2,8 +2,7 @@
 
 A full-stack real-time social platform where users can create communities, share posts, like, comment, and chat — built with modern web technologies and deployed to production.
 
-🔗 Live Demo: https://your-vercel-domain.vercel.app
-⚙ Backend API: https://your-render-domain.onrender.com
+🔗 Live Demo: https://hobby-community-app.vercel.app/
 
 🚀 Features
 🔐 JWT-based Authentication
