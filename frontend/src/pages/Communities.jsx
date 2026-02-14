@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API, { clearCache } from '../services/api';
 import toast from 'react-hot-toast';
-import { Check } from 'lucide-react';
+import { Check, Users } from 'lucide-react';
 
 export default function Communities() {
   const navigate = useNavigate();
@@ -82,7 +82,6 @@ export default function Communities() {
         if (community) setJoinedCommunities([...joinedCommunities, community]);
       }
       
-      // ✅ Clear cache
       clearCache('/communities');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update membership');
@@ -116,29 +115,31 @@ export default function Communities() {
         onClick={() => navigate(`/communities/${community._id}`)}
       >
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-        
-        {isJoined && (
-          <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
-            <Check size={14} />
-            Joined
-          </div>
-        )}
       </div>
 
       <div className="p-5">
-        <h3 
-          className="text-lg font-bold mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition cursor-pointer text-slate-900 dark:text-slate-100 line-clamp-1"
-          onClick={() => navigate(`/communities/${community._id}`)}
-        >
-          {community.name}
-        </h3>
+        <div className="flex items-start justify-between mb-2">
+          <h3 
+            className="text-lg font-bold group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition cursor-pointer text-slate-900 dark:text-slate-100 line-clamp-1 flex-1"
+            onClick={() => navigate(`/communities/${community._id}`)}
+          >
+            {community.name}
+          </h3>
+          {isJoined && (
+            <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-full text-xs font-semibold">
+              <Check size={12} />
+              Joined
+            </div>
+          )}
+        </div>
 
         <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-4 min-h-[40px]">
           {community.description}
         </p>
 
         <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <Users size={14} />
             {community.memberCount} members
           </span>
           <span className="badge bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-medium">
@@ -153,18 +154,27 @@ export default function Communities() {
               handleJoinToggle(community._id, isJoined);
             }}
             disabled={joiningId === community._id}
-            className={`flex-1 py-2 rounded-lg font-medium transition text-sm ${
+            className={`flex-1 py-2 rounded-lg font-medium transition text-sm flex items-center justify-center gap-1.5 ${
               isJoined
-                ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            } disabled:opacity-50`}
+                ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 border border-slate-200 dark:border-slate-600'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {joiningId === community._id ? 'Loading...' : isJoined ? 'Leave' : 'Join'}
+            {joiningId === community._id ? (
+              'Loading...'
+            ) : isJoined ? (
+              <>
+                <Check size={16} />
+                Joined
+              </>
+            ) : (
+              'Join'
+            )}
           </button>
 
           <button
             onClick={() => navigate(`/communities/${community._id}`)}
-            className="px-4 py-2 rounded-lg font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition text-sm"
+            className="px-4 py-2 rounded-lg font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition text-sm border border-slate-200 dark:border-slate-600"
           >
             View
           </button>
@@ -175,7 +185,6 @@ export default function Communities() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
         <div>
           <h1 className="text-3xl font-bold gradient-text">
@@ -236,10 +245,17 @@ export default function Communities() {
         <div className="space-y-10">
           {joinedCommunities.length > 0 && (
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-2">
-                <Check size={24} className="text-green-500" />
-                Your Communities ({joinedCommunities.length})
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <Check size={20} className="text-green-600 dark:text-green-400" />
+                  </div>
+                  Your Communities
+                </h2>
+                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                  {joinedCommunities.length} {joinedCommunities.length === 1 ? 'community' : 'communities'}
+                </span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {joinedCommunities.map((community) => (
                   <CommunityCard key={community._id} community={community} isJoined={true} />
@@ -250,9 +266,17 @@ export default function Communities() {
 
           {communities.length > 0 && (
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-                Discover More Communities
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                    <Users size={20} className="text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  Discover More Communities
+                </h2>
+                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                  {communities.length} available
+                </span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {communities.map((community) => (
                   <CommunityCard key={community._id} community={community} isJoined={false} />
