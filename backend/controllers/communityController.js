@@ -113,7 +113,7 @@ exports.getCommunities = async (req, res) => {
     const communitiesWithMembership = communities.map(community => ({
       ...community,
       isMember: community.members.some(m => m.toString() === userId),
-      isCreator: community.creator?._id?.toString() === userId
+      isCreator: community.creator._id.toString() === userId
     }));
 
     res.json({
@@ -149,7 +149,7 @@ exports.getCommunity = async (req, res) => {
     const userId = req.user._id.toString();
     const isMember = memberSet.has(userId);
     const isModerator = modSet.has(userId);
-    const isCreator = community.creator?._id?.toString() === userId;
+    const isCreator = community.creator._id.toString() === userId;
 
     res.json({
       ...community,

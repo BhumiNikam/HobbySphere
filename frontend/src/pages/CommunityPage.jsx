@@ -53,8 +53,6 @@ export default function CommunityPage() {
       });
       
       setCommunity(communityData);
-      console.log('Community data:', communityData);
-      console.log('Creator:', communityData.creator);
       const memberIds = communityData.members.map(m => m.toString());
       setIsMember(memberIds.includes(user._id) || communityData.isMember);
       setIsCreator(communityData.creator._id === user._id || communityData.isCreator);
@@ -161,7 +159,7 @@ export default function CommunityPage() {
         }} />
         
         <div className="p-6">
-          {/* CREATOR INFO */}
+          {/* CREATOR INFO - ALWAYS VISIBLE */}
           <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100 dark:border-slate-700">
             <img
               src={community.creator?.profileImage || `https://ui-avatars.com/api/?name=${community.creator?.fullName}&background=6366f1&color=fff`}
@@ -264,25 +262,6 @@ export default function CommunityPage() {
               <div>
                 <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-2">Description</h3>
                 <p className="text-slate-600 dark:text-slate-300">{community.description}</p>
-              </div>
-
-              {/* Creator Info in About */}
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <h3 className="font-semibold text-sm mb-2 text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <Crown size={16} className="text-yellow-600" />
-                  Community Admin
-                </h3>
-                <div className="flex items-center gap-3">
-                  <img
-                    src={community.creator?.profileImage || `https://ui-avatars.com/api/?name=${community.creator?.fullName}&background=6366f1&color=fff`}
-                    alt={community.creator?.fullName}
-                    className="w-10 h-10 rounded-full ring-2 ring-yellow-400"
-                  />
-                  <div>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{community.creator?.fullName}</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">@{community.creator?.username}</p>
-                  </div>
-                </div>
               </div>
 
               {community.rules && (

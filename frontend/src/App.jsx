@@ -40,6 +40,8 @@ const FollowingFeed = lazy(() => import('./pages/FollowingFeed'));
 const FollowersList = lazy(() => import('./pages/FollowersList'));
 const FollowingList = lazy(() => import('./pages/FollowingList'));
 const Hashtag = lazy(() => import('./pages/Hashtag'));
+const Communities = lazy(() => import('./pages/Communities'));
+const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const CommunitiesLayout = lazy(() => import('./pages/CommunitiesLayout'));
 const CreateCommunity = lazy(() => import('./pages/CreateCommunity'));
 
@@ -487,21 +489,41 @@ export default function App() {
                 </ProtectedRoute>
               } />
               
-              <Route path="/communities/create" element={
+              <Route path="/communities" element={
                 <ProtectedRoute>
                   <Layout>
                     <Suspense fallback={<LoadingSpinner />}>
-                      <CreateCommunity />
+                      <Communities />
                     </Suspense>
                   </Layout>
                 </ProtectedRoute>
               } />
               
-              <Route path="/communities/*" element={
+              <Route path="/communities/:id" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <CommunityPage />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/communities/my" element={
                 <ProtectedRoute>
                   <Layout>
                     <Suspense fallback={<LoadingSpinner />}>
                       <CommunitiesLayout />
+                    </Suspense>
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/communities/create" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <CreateCommunity />
                     </Suspense>
                   </Layout>
                 </ProtectedRoute>
