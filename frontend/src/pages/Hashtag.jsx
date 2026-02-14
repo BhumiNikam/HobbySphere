@@ -57,7 +57,7 @@ export default function Hashtag() {
   }
 
   return (
-    <div className="w-full space-y-8 py-6">
+    <div className="w-full space-y-8 py-6 relative">
       {/* HEADER */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
         <div className="flex items-center gap-4 justify-between">
@@ -75,9 +75,9 @@ export default function Hashtag() {
           <button
             aria-label="Close"
             onClick={() => navigate(-1)}
-            className="ml-auto p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+            className="ml-auto p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm"
           >
-            <X size={24} className="text-slate-600 dark:text-slate-400" />
+            <X size={24} className="text-slate-700 dark:text-slate-300" />
           </button>
         </div>
       </div>

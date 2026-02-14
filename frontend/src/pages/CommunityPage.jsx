@@ -212,11 +212,11 @@ export default function CommunityPage() {
   );
 
   return (
-    <div className="w-full pb-12">
-      {/* BACK BUTTON */}
+    <div className="w-full pb-12 relative">
+      {/* BACK BUTTON - Top Right */}
       <button
         onClick={() => navigate(-1)}
-        className="mb-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex"
+        className="absolute top-0 right-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
         title="Go back"
       >
         <X size={24} className="text-slate-700 dark:text-slate-300" />

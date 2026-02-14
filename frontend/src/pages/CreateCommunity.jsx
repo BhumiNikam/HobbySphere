@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import API from '../services/api';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Upload } from 'lucide-react';
+import { ArrowLeft, Upload, X } from 'lucide-react';
 
 export default function CreateCommunity() {
   const navigate = useNavigate();
@@ -55,18 +55,18 @@ export default function CreateCommunity() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8">
-      <div className="max-w-3xl mx-auto px-4">
+      <div className="max-w-3xl mx-auto px-4 relative">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={() => navigate('/communities')}
-            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          >
-            <ArrowLeft size={24} className="text-slate-700 dark:text-slate-300" />
-          </button>
+        <div className="flex items-center justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
             {t('community.createCommunity') || 'Create Community'}
           </h1>
+          <button
+            onClick={() => navigate('/communities')}
+            className="p-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
+          >
+            <X size={24} className="text-slate-700 dark:text-slate-300" />
+          </button>
         </div>
 
         {/* Form */}

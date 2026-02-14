@@ -36,11 +36,11 @@ export default function FollowingList() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10 animate-fade-in">
+    <div className="max-w-2xl mx-auto px-4 py-10 animate-fade-in relative">
       
       {/* ================= HEADER ================= */}
       <div className="mb-8 flex items-center justify-between">
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Following</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             People @{username} follows
@@ -48,10 +48,10 @@ export default function FollowingList() {
         </div>
         <button
           onClick={() => navigate(`/profile/${username}`)}
-          className="ml-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          className="ml-4 p-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
           title="Close"
         >
-          <X size={24} className="text-slate-900 dark:text-slate-100" />
+          <X size={24} className="text-slate-700 dark:text-slate-300" />
         </button>
       </div>
 

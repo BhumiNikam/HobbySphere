@@ -43,7 +43,6 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
   const [showComments, setShowComments] = useState(false);
   const [likeBurst, setLikeBurst] = useState(false);
 
-  // ✅ Real-time socket listeners
   useEffect(() => {
     if (!socket) return;
 
@@ -94,7 +93,6 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
     };
   }, [socket, post._id, userId]);
 
-  // ✅ Check bookmark status
   useEffect(() => {
     (async () => {
       try {
@@ -205,7 +203,6 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
     try {
       const res = await API.get(`/posts/${post._id}/download/${mediaIndex}`);
       
-      // Create temporary anchor and trigger download
       const link = document.createElement('a');
       link.href = res.data.url;
       link.download = res.data.fileName;
@@ -239,6 +236,9 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
     }), [navigate]);
 
   const isPostAuthor = post.author._id?.toString() === userId || post.author._id === userId;
+
+  // Check if post has media
+  const hasMedia = (post.media?.length > 0) || (post.images?.length > 0);
 
   return (
     <article
@@ -316,13 +316,14 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
         )}
       </div>
 
-      {/* MEDIA */}
+      {/* MEDIA with Download Button */}
       {post.media?.length > 0 && (
         <MediaRenderer 
           media={post.media} 
           onDoubleClick={handleMediaDoubleClick}
           onDownload={handleDownload}
           showDownload={isMember}
+          likeBurst={likeBurst}
         />
       )}
 
@@ -352,6 +353,17 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
             />
           )}
 
+          {/* Download button for legacy images */}
+          {isMember && (
+            <button
+              onClick={() => handleDownload(0)}
+              className="absolute top-4 right-4 p-2.5 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all backdrop-blur-sm"
+              title="Download"
+            >
+              <Download size={20} />
+            </button>
+          )}
+
           {likeBurst && (
             <Heart
               size={80}
@@ -364,7 +376,7 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
       )}
 
       {/* ACTIONS */}
-      <div className="flex items-center gap-0.5 sm:gap-1 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex items-center gap-1 px-3 sm:px-4 py-3 border-b border-slate-100 dark:border-slate-800">
         <button
           onClick={handleLike}
           disabled={!isMember}
@@ -398,6 +410,17 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
           <Share2 size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
         </button>
 
+        {/* Download button in actions bar - only show if post has media */}
+        {hasMedia && isMember && (
+          <button
+            onClick={() => handleDownload(0)}
+            className="p-2 sm:p-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-green-600 dark:hover:text-green-400 transition-all tap-target"
+            title="Download"
+          >
+            <Download size={20} className="sm:w-[22px] sm:h-[22px]" strokeWidth={2.5} />
+          </button>
+        )}
+
         <button
           onClick={handleBookmark}
           className={`
@@ -414,7 +437,7 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
       </div>
 
       {/* LIKES & INFO */}
-      <div className="px-3 sm:px-4 pt-2.5 sm:pt-3">
+      <div className="px-3 sm:px-4 pt-3">
         {likes > 0 && (
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
             {likes.toLocaleString()} {likes === 1 ? t('post.like') : t('post.like') + 's'}
@@ -441,7 +464,7 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
 
       {/* COMMENTS */}
       {showComments && isMember && (
-        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-slate-100 dark:border-slate-800 mt-3">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2">
           <CommentSection
             postId={post._id}
             currentUser={currentUser}

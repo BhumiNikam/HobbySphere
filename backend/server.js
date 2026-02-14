@@ -6,8 +6,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
-// Remove apiLimiter from here - it will be applied per-route instead
-// const { apiLimiter } = require('./middleware/rateLimiter');
 
 dotenv.config();
 
@@ -57,9 +55,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Security headers
 app.use(helmet());
 
-// REMOVE THIS LINE - Don't apply rate limiting globally
-// app.use('/api/', apiLimiter);
-
 // Socket.io
 const userSockets = new Map();
 
@@ -90,9 +85,8 @@ app.use('/api/posts', require('./routes/commentRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
-app.use('/api', require('./routes/bookmarkRoutes'));
+app.use('/api/bookmarks', require('./routes/bookmarkRoutes')); // ✅ FIXED: Changed from '/api' to '/api/bookmarks'
 app.use('/api/messages', require('./routes/messageRoutes'));
-// app.use('/api/stories', require('./routes/storyRoutes')); // Story feature removed
 
 // Test route
 app.get('/', (req, res) => {

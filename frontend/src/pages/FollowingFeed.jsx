@@ -181,18 +181,18 @@ export default function FollowingFeed() {
   ) ?? -1;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8 relative">
+      {/* BACK BUTTON - Top Right */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute top-6 right-4 z-20 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
+        title="Go back"
+      >
+        <X size={24} className="text-slate-700 dark:text-slate-300" />
+      </button>
+      
       {/* Main content column */}
       <div className="w-full space-y-6 py-6 min-w-0">
-        {/* BACK BUTTON */}
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex"
-          title="Go back"
-        >
-          <X size={24} className="text-slate-700 dark:text-slate-300" />
-        </button>
-        
         {/* ✅ MOBILE ONLY: Tab switcher */}
         <div className="lg:hidden sticky top-[120px] sm:top-24 z-30 bg-slate-50 dark:bg-slate-950 -mx-4 px-4 pb-4">
           <div className="flex gap-2 bg-white dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">

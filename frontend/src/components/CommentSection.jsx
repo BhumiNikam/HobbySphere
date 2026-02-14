@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Trash2, Send } from 'lucide-react';
+import { Trash2, Send, MessageCircle, Heart, MoreVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../context/SocketContext';
 import API from '../services/api';
@@ -16,8 +16,10 @@ export default function CommentSection({
   const [loading, setLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(initialCommentCount || 0);
+  const [expandedMenuId, setExpandedMenuId] = useState(null);
 
   const inputRef = useRef(null);
+  const menuRef = useRef(null);
 
   /* ================= REAL-TIME UPDATES ================= */
   useEffect(() => {
@@ -26,7 +28,6 @@ export default function CommentSection({
     const handleCommentAdded = ({ postId: eventPostId, comment, commentsCount }) => {
       if (eventPostId === postId) {
         setComments((prev) => {
-          // Avoid duplicates
           if (prev.some(c => c._id === comment._id)) return prev;
           return [comment, ...prev];
         });
@@ -55,9 +56,18 @@ export default function CommentSection({
     if (!showComments) return;
 
     fetchComments();
-
     setTimeout(() => inputRef.current?.focus(), 120);
   }, [showComments]);
+
+  useEffect(() => {
+    const closeMenu = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setExpandedMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', closeMenu);
+    return () => document.removeEventListener('mousedown', closeMenu);
+  }, []);
 
   const fetchComments = async () => {
     try {
@@ -76,8 +86,6 @@ export default function CommentSection({
     setLoading(true);
     try {
       const res = await API.post(`/posts/${postId}/comments`, { text: newComment });
-
-      // Add comment optimistically
       setComments((prev) => [res.data, ...prev]);
       setNewComment('');
     } finally {
@@ -87,12 +95,12 @@ export default function CommentSection({
 
   /* ================= DELETE COMMENT ================= */
   const handleDelete = async (commentId) => {
-    if (!window.confirm(t('post.delete') + '?')) return;
+    if (!window.confirm('Delete this comment?')) return;
 
     try {
       await API.delete(`/posts/comments/${commentId}`);
-      // Remove comment optimistically
       setComments((prev) => prev.filter((c) => c._id !== commentId));
+      setExpandedMenuId(null);
     } catch {
       console.error('Delete comment failed');
     }
@@ -102,124 +110,227 @@ export default function CommentSection({
   const formatDate = (date) => {
     const diff = Math.floor((Date.now() - new Date(date)) / 1000);
 
-    if (diff < 60) return t('post.justNow');
-    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    return `${Math.floor(diff / 86400)}d`;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return new Date(date).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
   };
 
   /* ================= UI ================= */
   return (
-    <div className="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4">
-      {/* TOGGLE */}
+    <div className="mt-4 border-t border-slate-200 dark:border-slate-700">
+      {/* TOGGLE BUTTON */}
       <button
         onClick={() => setShowComments((p) => !p)}
         className="
-          text-sm font-medium
-          text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400
-          transition mb-3
+          w-full flex items-center justify-between
+          py-3 px-2
+          text-slate-700 dark:text-slate-300
+          hover:bg-slate-50 dark:hover:bg-slate-800/50
+          rounded-lg transition-all
+          group
         "
       >
-        {showComments
-          ? t('common.viewLess')
-          : `${t('common.viewMore')} ${commentCount} ${t('post.comment')}${commentCount !== 1 ? 's' : ''}`}
+        <div className="flex items-center gap-2">
+          <MessageCircle 
+            size={18} 
+            className="text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" 
+          />
+          <span className="text-sm font-medium">
+            {commentCount} {commentCount === 1 ? 'Comment' : 'Comments'}
+          </span>
+        </div>
+        <span className="text-xs text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+          {showComments ? 'Hide' : 'View all'}
+        </span>
       </button>
 
       {showComments && (
-        <div className="space-y-5 animate-fade-in">
-          {/* INPUT */}
-          <form
-            onSubmit={handleSubmit}
-            className="
-              flex items-center gap-3
-              bg-slate-50 dark:bg-slate-700
-              border border-slate-200 dark:border-slate-600
-              rounded-full
-              px-4 py-2.5
-            "
-          >
-            <input
-              ref={inputRef}
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder={t('post.writeComment')}
-              maxLength={500}
-              className="
-                flex-1 bg-transparent
-                text-sm outline-none
-                text-slate-900 dark:text-slate-100
-                placeholder:text-slate-400 dark:placeholder:text-slate-500
-              "
-            />
-
-            <button
-              type="submit"
-              disabled={loading || !newComment.trim()}
-              className="
-                text-indigo-600 dark:text-indigo-400
-                disabled:text-slate-400 dark:disabled:text-slate-600
-                transition
-                active:scale-95
-              "
-            >
-              <Send size={18} />
-            </button>
-          </form>
-
-          {/* EMPTY STATE */}
-          {comments.length === 0 && (
-            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">
-              {t('post.comment')} ✨
-            </p>
-          )}
-
-          {/* COMMENTS */}
-          {comments.map((comment) => (
-            <div key={comment._id} className="flex gap-3 group">
-              {/* AVATAR */}
+        <div className="pt-4 space-y-4 animate-fade-in">
+          {/* INPUT FORM */}
+          <form onSubmit={handleSubmit} className="relative">
+            <div className="flex items-start gap-3">
               <img
                 src={
-                  comment.author?.profileImage ||
-                  `https://ui-avatars.com/api/?name=${comment.author?.fullName}&background=6366f1&color=fff`
+                  currentUser?.profileImage ||
+                  `https://ui-avatars.com/api/?name=${currentUser?.fullName}&background=6366f1&color=fff`
                 }
-                alt={comment.author?.fullName}
-                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                alt={currentUser?.fullName}
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-slate-100 dark:ring-slate-800"
               />
 
-              {/* BODY */}
-              <div className="flex-1">
-                <div className="bg-slate-100 dark:bg-slate-700 rounded-2xl px-4 py-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {comment.author?.fullName}
-                    </p>
-
-                    {currentUser?._id === comment.author?._id && (
-                      <button
-                        onClick={() => handleDelete(comment._id)}
-                        className="
-                          text-slate-400
-                          opacity-0 group-hover:opacity-100
-                          hover:text-red-500
-                          transition
-                        "
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-
-                  <p className="text-sm text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
-                    {comment.text}
-                  </p>
+              <div className="flex-1 relative">
+                <textarea
+                  ref={inputRef}
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Write a comment..."
+                  maxLength={500}
+                  rows={1}
+                  onInput={(e) => {
+                    e.target.style.height = 'auto';
+                    e.target.style.height = e.target.scrollHeight + 'px';
+                  }}
+                  className="
+                    w-full px-4 py-3
+                    bg-slate-50 dark:bg-slate-800
+                    border border-slate-200 dark:border-slate-700
+                    rounded-2xl
+                    text-sm text-slate-900 dark:text-slate-100
+                    placeholder:text-slate-400 dark:placeholder:text-slate-500
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                    resize-none
+                    transition-all
+                  "
+                  style={{ maxHeight: '120px' }}
+                />
+                
+                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
+                    {newComment.length}/500
+                  </span>
+                  
+                  <button
+                    type="submit"
+                    disabled={loading || !newComment.trim()}
+                    className="
+                      p-2 rounded-full
+                      bg-indigo-600 hover:bg-indigo-700
+                      text-white
+                      disabled:bg-slate-300 dark:disabled:bg-slate-700
+                      disabled:cursor-not-allowed
+                      transition-all
+                      active:scale-95
+                    "
+                  >
+                    <Send size={16} />
+                  </button>
                 </div>
-
-                <p className="text-xs text-slate-400 mt-1 ml-2">
-                  {formatDate(comment.createdAt)}
-                </p>
               </div>
             </div>
-          ))}
+          </form>
+
+          {/* COMMENTS LIST */}
+          <div className="space-y-3">
+            {comments.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mx-auto mb-3 flex items-center justify-center">
+                  <MessageCircle size={24} className="text-slate-300 dark:text-slate-600" />
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  No comments yet
+                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                  Be the first to comment!
+                </p>
+              </div>
+            ) : (
+              comments.map((comment) => (
+                <div
+                  key={comment._id}
+                  className="
+                    group/comment
+                    flex gap-3
+                    p-3
+                    rounded-xl
+                    hover:bg-slate-50 dark:hover:bg-slate-800/50
+                    transition-all
+                  "
+                >
+                  {/* AVATAR */}
+                  <img
+                    src={
+                      comment.author?.profileImage ||
+                      `https://ui-avatars.com/api/?name=${comment.author?.fullName}&background=6366f1&color=fff`
+                    }
+                    alt={comment.author?.fullName}
+                    className="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-slate-100 dark:ring-slate-800"
+                  />
+
+                  {/* CONTENT */}
+                  <div className="flex-1 min-w-0">
+                    <div className="
+                      bg-slate-100 dark:bg-slate-800
+                      rounded-2xl rounded-tl-sm
+                      px-4 py-3
+                    ">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {comment.author?.fullName}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            @{comment.author?.username}
+                          </p>
+                        </div>
+
+                        {currentUser?._id === comment.author?._id && (
+                          <div className="relative" ref={menuRef}>
+                            <button
+                              onClick={() => setExpandedMenuId(
+                                expandedMenuId === comment._id ? null : comment._id
+                              )}
+                              className="
+                                p-1.5 rounded-lg
+                                text-slate-400
+                                opacity-0 group-hover/comment:opacity-100
+                                hover:bg-slate-200 dark:hover:bg-slate-700
+                                transition-all
+                              "
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+
+                            {expandedMenuId === comment._id && (
+                              <div className="
+                                absolute right-0 mt-1
+                                bg-white dark:bg-slate-900
+                                border border-slate-200 dark:border-slate-700
+                                rounded-xl shadow-lg
+                                overflow-hidden
+                                z-10
+                                min-w-[140px]
+                                animate-scale-in
+                              ">
+                                <button
+                                  onClick={() => handleDelete(comment._id)}
+                                  className="
+                                    w-full flex items-center gap-2
+                                    px-4 py-2.5
+                                    text-sm text-red-600 dark:text-red-400
+                                    hover:bg-red-50 dark:hover:bg-red-900/20
+                                    transition-colors
+                                  "
+                                >
+                                  <Trash2 size={16} />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed break-words">
+                        {comment.text}
+                      </p>
+                    </div>
+
+                    {/* ACTIONS */}
+                    <div className="flex items-center gap-4 mt-1.5 px-2">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {formatDate(comment.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
