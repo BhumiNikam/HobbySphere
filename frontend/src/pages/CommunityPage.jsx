@@ -58,9 +58,13 @@ export default function CommunityPage() {
       setPosts(prev => prev.filter(p => p._id !== postId));
     };
 
-    const handleMemberJoined = ({ communityId, memberCount }) => {
+    const handleMemberJoined = ({ communityId, userId, memberCount }) => {
       if (communityId === id) {
         setCommunity(prev => ({ ...prev, memberCount }));
+        // ✅ If current user joined, update isMember immediately
+        if (userId === user._id) {
+          setIsMember(true);
+        }
       }
     };
 
@@ -147,10 +151,17 @@ export default function CommunityPage() {
     try {
       await API.post(`/communities/${id}/join`);
       toast.success(t('community.joined') || 'Joined community!');
+      
+      // ✅ Update UI immediately without waiting for socket or refresh
       setIsMember(true);
+      setCommunity(prev => ({
+        ...prev,
+        memberCount: (prev?.memberCount || 0) + 1
+      }));
+      
       communityCache.delete(id);
       await refreshUser();
-      fetchCommunity();
+      // Don't call fetchCommunity here - we already updated the UI
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to join');
     }
@@ -160,11 +171,17 @@ export default function CommunityPage() {
     try {
       await API.post(`/communities/${id}/leave`);
       toast.success(t('community.left') || 'Left community');
+      
+      // ✅ Update UI immediately
       setIsMember(false);
       setShowLeaveConfirm(false);
+      setCommunity(prev => ({
+        ...prev,
+        memberCount: Math.max((prev?.memberCount || 1) - 1, 0)
+      }));
+      
       communityCache.delete(id);
       await refreshUser();
-      fetchCommunity();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to leave');
     }
@@ -212,11 +229,11 @@ export default function CommunityPage() {
   );
 
   return (
-    <div className="w-full pb-12 relative">
-      {/* BACK BUTTON - Top Right */}
+    <div className="w-full pb-12">
+      {/* BACK BUTTON */}
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-0 right-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
+        className="mb-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex"
         title="Go back"
       >
         <X size={24} className="text-slate-700 dark:text-slate-300" />
@@ -460,12 +477,16 @@ export default function CommunityPage() {
 
       {/* POSTS LIST - ✅ PASS isMember TO PostCard */}
       <div className="w-full space-y-6">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+          Posts
+        </h2>
+
         {posts.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-16 text-center border border-slate-100 dark:border-slate-700">
             <div className="text-4xl mb-4">📝</div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">No posts yet</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              {isMember ? 'Be the first to post!' : 'Join to see posts'}
+              {isMember ? 'Be the first to post!' : 'Join to see and create posts.'}
             </p>
           </div>
         ) : (
