@@ -253,19 +253,11 @@ export default function CommunityPage() {
     </div>
   );
 
-  const handleBack = () => {
-    if (window.history.state && window.history.state.idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
-  };
-
   return (
     <div className="w-full pb-12">
       {/* BACK BUTTON */}
       <button
-        onClick={handleBack}
+        onClick={() => safeNavigateBack(navigate)}
         className="mb-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex"
         title="Go back"
       >

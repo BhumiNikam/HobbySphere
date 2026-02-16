@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API from '../services/api';
 import { X } from 'lucide-react';
+import { safeNavigateBack } from '../utils/navigation';
 
 export default function MyCommunities() {
   const { user } = useContext(AuthContext);
@@ -26,21 +27,13 @@ export default function MyCommunities() {
     }
   };
 
-  const handleBack = () => {
-    if (window.history.state && window.history.state.idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
-  };
-
   if (loading) return <div className="text-center py-12">Loading...</div>;
 
   return (
     <div className="max-w-6xl mx-auto p-6 relative">
       {/* BACK BUTTON - Top Right */}
       <button
-        onClick={handleBack}
+        onClick={() => safeNavigateBack(navigate)}
         className="absolute top-6 right-6 z-10 p-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
         title="Go back"
       >

@@ -17,6 +17,7 @@ import {
 import ImageUploadModal from '../components/ImageUploadModal';
 import PostCard from '../components/PostCard';
 import API, { clearCache } from '../services/api';
+import { safeNavigateBack } from '../utils/navigation';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -139,19 +140,11 @@ export default function Profile() {
     );
   }
 
-  const handleBack = () => {
-    if (window.history.state && window.history.state.idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
-  };
-
   return (
     <div className="w-full pb-8 sm:pb-12 animate-fade-in max-w-4xl mx-auto relative">
       {/* BACK BUTTON - Top Right */}
       <button
-        onClick={handleBack}
+        onClick={() => safeNavigateBack(navigate)}
         className="absolute top-0 right-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
         title="Go back"
       >

@@ -8,6 +8,7 @@ import PostCard from '../components/PostCard';
 import API from '../services/api';
 import PostSkeleton from '../components/ui/PostSkeleton';
 import RightSidebar from '../components/sidebar/RightSidebar';
+import { safeNavigateBack } from '../utils/navigation';
 
 const SEEN_POSTS_KEY = 'hobbysphere_seen_following_posts';
 const LIMIT = 5;
@@ -180,19 +181,11 @@ export default function FollowingFeed() {
     (p) => !seenPosts.has(p._id)
   ) ?? -1;
 
-  const handleBack = () => {
-    if (window.history.state && window.history.state.idx > 0) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8 relative">
       {/* BACK BUTTON - Top Right */}
       <button
-        onClick={handleBack}
+        onClick={() => safeNavigateBack(navigate)}
         className="absolute top-6 right-4 z-20 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
         title="Go back"
       >

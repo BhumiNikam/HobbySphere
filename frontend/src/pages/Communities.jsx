@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import API, { clearCache } from '../services/api';
 import toast from 'react-hot-toast';
 import { Check, Users, Crown, X } from 'lucide-react';
+import { safeNavigateBack } from '../utils/navigation';
 
 export default function Communities() {
   const navigate = useNavigate();
@@ -224,13 +225,7 @@ export default function Communities() {
           </Link>
           
           <button
-            onClick={() => {
-              if (window.history.state && window.history.state.idx > 0) {
-                navigate(-1);
-              } else {
-                navigate('/');
-              }
-            }}
+            onClick={() => safeNavigateBack(navigate)}
             className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
             title="Go back"
           >

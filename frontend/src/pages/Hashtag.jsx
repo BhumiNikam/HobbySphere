@@ -4,6 +4,7 @@ import { Hash, X } from 'lucide-react';
 import PostCard from '../components/PostCard';
 import { AuthContext } from '../context/AuthContext';
 import API from '../services/api';
+import { safeNavigateBack } from '../utils/navigation';
 
 export default function Hashtag() {
   const { tag } = useParams();
@@ -74,13 +75,7 @@ export default function Hashtag() {
           </div>
           <button
             aria-label="Close"
-            onClick={() => {
-              if (window.history.state && window.history.state.idx > 0) {
-                navigate(-1);
-              } else {
-                navigate('/');
-              }
-            }}
+            onClick={() => safeNavigateBack(navigate)}
             className="ml-auto p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm"
           >
             <X size={24} className="text-slate-700 dark:text-slate-300" />
