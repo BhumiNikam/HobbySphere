@@ -19,7 +19,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/communities');
+      navigate('/communities', { replace: true });
     } catch (err) {
       const message = err.response?.data?.message || 'Login failed';
       toast.error(message);
@@ -37,7 +37,7 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(res.data.user));
 
       toast.success('👤 Logged in as Guest!');
-      navigate('/communities');
+      navigate('/communities', { replace: true });
 
       window.location.reload();
     } catch (err) {
