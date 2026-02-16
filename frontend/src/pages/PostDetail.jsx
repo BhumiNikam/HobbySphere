@@ -79,10 +79,10 @@ export default function PostDetail() {
       {/* BACK BUTTON - Top Right */}
       <button
         onClick={() => safeNavigateBack(navigate)}
-        className="absolute top-4 right-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
+        className="fixed top-20 right-6 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200 dark:border-slate-700 group"
         title="Go back"
       >
-        <X size={20} className="text-slate-700 dark:text-slate-300" />
+        <X size={20} className="text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
       </button>
 
       {/* Post Card */}

@@ -167,19 +167,19 @@ export default function Messages() {
       
       <button
         onClick={() => safeNavigateBack(navigate)}
-        className="hidden md:block absolute top-4 right-4 z-20 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-2 rounded-xl shadow-md dark:shadow-xl dark:shadow-black/20 transition-all border border-slate-200 dark:border-slate-800 hover:scale-105"
+        className="hidden md:flex fixed top-20 right-6 z-50 w-10 h-10 items-center justify-center rounded-full bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200 dark:border-slate-700 group"
         title="Close messages"
       >
-        <X size={20} />
+        <X size={20} className="text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
       </button>
 
       {selectedConversation && (
         <button
           onClick={() => safeNavigateBack(navigate)}
-          className="md:hidden fixed top-4 left-4 z-20 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 p-2 rounded-xl shadow-md dark:shadow-xl dark:shadow-black/20 border border-slate-200 dark:border-slate-800"
+          className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200 dark:border-slate-700 group"
           title="Go back"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={20} className="text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
         </button>
       )}
 
@@ -194,9 +194,9 @@ export default function Messages() {
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Messages</h1>
             <button
               onClick={() => safeNavigateBack(navigate)}
-              className="md:hidden text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group"
             >
-              <X size={20} />
+              <X size={20} className="text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
             </button>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">

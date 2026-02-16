@@ -257,15 +257,18 @@ export default function CommunityPage() {
     <div className="w-full pb-12 relative">
       {/* BACK BUTTON - Top Right */}
       <button
-        onClick={() => safeNavigateBack(navigate)}
-        className="absolute top-0 right-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
+        onClick={() => {
+          console.log('Close button clicked');
+          safeNavigateBack(navigate);
+        }}
+        className="fixed top-20 right-6 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-lg hover:shadow-xl transition-all duration-200 border border-slate-200 dark:border-slate-700 group"
         title="Go back"
       >
-        <X size={24} className="text-slate-700 dark:text-slate-300" />
+        <X size={20} className="text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
       </button>
       
       {/* COMMUNITY HEADER */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-card mb-8 overflow-hidden border border-slate-200/60 dark:border-slate-700/60 mt-14">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-card mb-8 overflow-hidden border border-slate-200/60 dark:border-slate-700/60">
         <div className="h-40 bg-gradient-to-r from-indigo-500 to-purple-600" style={{
           backgroundImage: community.coverImage?.url ? `url(${community.coverImage.url})` : undefined,
           backgroundSize: 'cover'
