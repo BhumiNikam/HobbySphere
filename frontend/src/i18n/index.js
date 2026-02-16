@@ -6,6 +6,12 @@ import en from './locales/en.json';
 import hi from './locales/hi.json';
 import mr from './locales/mr.json';
 
+// Language detector configuration
+const detectionOptions = {
+  order: ['localStorage', 'navigator'],
+  caches: ['localStorage'],
+};
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -16,6 +22,7 @@ i18n
       mr: { translation: mr },
     },
     fallbackLng: 'en',
+    detection: detectionOptions,
     interpolation: {
       escapeValue: false,
     },
