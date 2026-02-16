@@ -9,6 +9,7 @@ import PostForm from '../components/PostForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { Info, Trash2, Users as UsersIcon, TrendingUp, Tag, Crown, LogOut, X } from 'lucide-react';
+import { safeNavigateBack } from '../utils/navigation';
 
 const communityCache = new Map();
 
