@@ -50,6 +50,7 @@ import NotificationBell from './components/NotificationBell';
 import SearchBar from './components/SearchBar';
 import ScrollToTop from './components/ScrollToTop';
 import PostForm from './components/PostForm';
+import { trackNavigation, clearNavigationHistory } from './utils/navigation';
 
 // ✅ LAZY LOAD SIDEBAR COMPONENTS - Only load when needed
 const TrendingHashtags = lazy(() => import('./components/sidebar/TrendingHashtags'));
@@ -106,12 +107,14 @@ function Layout({ children }) {
     if (isGuest) {
       setShowGuestWarning(true);
     } else {
+      clearNavigationHistory();
       logout();
     }
   };
 
   const confirmGuestLogout = () => {
     setShowGuestWarning(false);
+    clearNavigationHistory();
     logout();
   };
 
@@ -126,9 +129,10 @@ function Layout({ children }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  /* Close mobile menu on route change */
+  /* Track navigation history and close mobile menu on route change */
   useEffect(() => {
     setShowMobileMenu(false);
+    trackNavigation(location.pathname);
   }, [location.pathname]);
 
   return (
