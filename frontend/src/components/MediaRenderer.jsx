@@ -20,13 +20,13 @@ export default function MediaRenderer({ media, onDoubleClick, onDownload, showDo
             <img
               src={item.url}
               alt="post media"
+              loading="lazy"
               className="w-full h-auto object-contain"
               style={{ maxHeight: '600px' }}
               draggable={false}
               onDoubleClick={onDoubleClick}
             />
             
-            {/* Like burst animation */}
             {likeBurst && (
               <Heart
                 size={80}
@@ -43,6 +43,7 @@ export default function MediaRenderer({ media, onDoubleClick, onDownload, showDo
           <video
             key={index}
             controls
+            preload="metadata"
             className="w-full h-full object-contain bg-slate-950"
             style={{ maxHeight: '600px' }}
             src={item.url}
@@ -60,7 +61,7 @@ export default function MediaRenderer({ media, onDoubleClick, onDownload, showDo
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 truncate max-w-full px-4">
               {item.fileName || 'Audio file'}
             </p>
-            <audio controls className="w-full max-w-md">
+            <audio controls preload="metadata" className="w-full max-w-md">
               <source src={item.url} type={item.mimeType || 'audio/mpeg'} />
               Your browser doesn't support audio.
             </audio>
@@ -144,7 +145,6 @@ export default function MediaRenderer({ media, onDoubleClick, onDownload, showDo
     <div className="relative bg-slate-950 flex items-center justify-center">
       {renderMedia(currentMedia, currentIndex)}
 
-      {/* Download button - ALWAYS VISIBLE for images and videos */}
       {showDownload && (currentMedia.type === 'image' || currentMedia.type === 'video') && (
         <button
           onClick={() => onDownload(currentIndex)}
@@ -167,7 +167,6 @@ export default function MediaRenderer({ media, onDoubleClick, onDownload, showDo
         </button>
       )}
 
-      {/* Multiple media navigation */}
       {media.length > 1 && (
         <>
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
@@ -204,7 +203,6 @@ export default function MediaRenderer({ media, onDoubleClick, onDownload, showDo
         </>
       )}
 
-      {/* Media type indicator */}
       <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-full text-white text-xs font-medium flex items-center gap-1.5 z-10">
         {currentMedia.type === 'image' && <ImageIcon size={14} />}
         {currentMedia.type === 'video' && <Video size={14} />}

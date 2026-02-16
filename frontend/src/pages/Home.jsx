@@ -9,7 +9,7 @@ import PostSkeleton from '../components/ui/PostSkeleton';
 import RightSidebar from '../components/sidebar/RightSidebar';
 
 const SEEN_POSTS_KEY = 'hobbysphere_seen_home_posts';
-const LIMIT = 15;
+const LIMIT = 8;
 
 function FeedSkeleton() {
   return (
@@ -88,7 +88,6 @@ export default function Home() {
     }
   }, [posts]);
 
-  /* ================= REAL-TIME SOCKET LISTENERS ================= */
   useEffect(() => {
     if (!socket) return;
 
@@ -96,10 +95,8 @@ export default function Home() {
       if (window.scrollY > 200) {
         setHasNewPosts(true);
       } else {
-        // Add post to top if user is at top of page
         setPosts((prev) => {
           if (!prev) return [newPost];
-          // Avoid duplicates
           if (prev.some(p => p._id === newPost._id)) return prev;
           return [newPost, ...prev];
         });
@@ -126,7 +123,6 @@ export default function Home() {
     };
   }, [socket]);
 
-  // Legacy event listener for compatibility
   useEffect(() => {
     const onPostCreated = (e) => {
       setPosts((prev) => {

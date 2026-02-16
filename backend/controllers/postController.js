@@ -4,9 +4,6 @@ const Community = require('../models/Community');
 const cloudinary = require('../config/cloudinary');
 const { createNotification } = require('../utils/notifications');
 
-/* =====================================================
-   HELPER: Get media type from mimetype
-===================================================== */
 const getMediaType = (mimetype) => {
   if (mimetype.startsWith('image/')) return 'image';
   if (mimetype.startsWith('video/')) return 'video';
@@ -15,9 +12,6 @@ const getMediaType = (mimetype) => {
   return 'document';
 };
 
-/* =====================================================
-   CREATE POST - MULTI-MEDIA SUPPORT
-===================================================== */
 exports.createPost = async (req, res) => {
   try {
     const { content, communityId } = req.body;
@@ -26,20 +20,17 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ message: 'Post content is required' });
     }
 
-    // ✅ Validate community membership if posting to community
     if (communityId) {
       const community = await Community.findById(communityId);
       if (!community) {
         return res.status(404).json({ message: 'Community not found' });
       }
       
-      // Check if user is a member
       if (!community.members.includes(req.user._id)) {
         return res.status(403).json({ message: 'You must join the community to post' });
       }
     }
 
-    /* ===== UPLOAD MEDIA - ALL TYPES ===== */
     const media = [];
 
     if (req.files?.length) {
@@ -73,7 +64,6 @@ exports.createPost = async (req, res) => {
       media.push(...results);
     }
 
-    /* ===== HASHTAGS ===== */
     const hashtags = content.match(/#([\w-]+)/g) || [];
 
     const postData = {
@@ -93,12 +83,10 @@ exports.createPost = async (req, res) => {
       .populate('author', 'username fullName profileImage')
       .populate('community', 'name slug');
 
-    /* ===== REAL-TIME UPDATE ===== */
     const io = req.app.get('io');
     if (io) {
       io.emit('post_created', populatedPost);
       
-      // Emit to specific community room if applicable
       if (communityId) {
         io.to(`community:${communityId}`).emit('community_post_created', populatedPost);
       }
@@ -111,9 +99,6 @@ exports.createPost = async (req, res) => {
   }
 };
 
-/* =====================================================
-   HOME FEED
-===================================================== */
 exports.getFeed = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
@@ -122,6 +107,7 @@ exports.getFeed = async (req, res) => {
 
     const [posts, total] = await Promise.all([
       Post.find({})
+        .select('content author media images likes commentCount hashtags createdAt community')
         .populate('author', 'username fullName profileImage')
         .populate('community', 'name slug')
         .sort({ createdAt: -1 })
@@ -140,9 +126,6 @@ exports.getFeed = async (req, res) => {
   }
 };
 
-/* =====================================================
-   FOLLOWING FEED
-===================================================== */
 exports.getFollowingFeed = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
@@ -157,6 +140,7 @@ exports.getFollowingFeed = async (req, res) => {
 
     const [posts, total] = await Promise.all([
       Post.find({ author: { $in: user.following } })
+        .select('content author media images likes commentCount hashtags createdAt community')
         .populate('author', 'username fullName profileImage')
         .populate('community', 'name slug')
         .sort({ createdAt: -1 })
@@ -175,9 +159,6 @@ exports.getFollowingFeed = async (req, res) => {
   }
 };
 
-/* =====================================================
-   LIKE / UNLIKE POST
-===================================================== */
 exports.likePost = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -241,9 +222,6 @@ exports.likePost = async (req, res) => {
   }
 };
 
-/* =====================================================
-   DELETE POST
-===================================================== */
 exports.deletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.postId);
@@ -253,7 +231,6 @@ exports.deletePost = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // Delete all media from cloudinary (support both old and new schema)
     const mediaToDelete = post.media?.length ? post.media : post.images || [];
     
     await Promise.all(
@@ -275,33 +252,18 @@ exports.deletePost = async (req, res) => {
   }
 };
 
-/* =====================================================
-   DOWNLOAD POST MEDIA - PROXY DOWNLOAD WITH PROPER HEADERS
-===================================================== */
 exports.downloadMedia = async (req, res) => {
   try {
     const { postId, mediaIndex } = req.params;
     
-    console.log('📥 Download request:', { postId, mediaIndex });
-    
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).select('media images').lean();
     if (!post) {
-      console.error('❌ Post not found:', postId);
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    console.log('✅ Post found:', {
-      hasMedia: !!post.media,
-      mediaLength: post.media?.length,
-      hasImages: !!post.images,
-      imagesLength: post.images?.length
-    });
-
-    // ✅ Support both old 'images' and new 'media' fields
     const mediaArray = post.media?.length ? post.media : post.images || [];
     
     if (!mediaArray.length) {
-      console.error('❌ No media found in post:', postId);
       return res.status(404).json({ message: 'No media found in this post' });
     }
 
@@ -309,18 +271,9 @@ exports.downloadMedia = async (req, res) => {
     const mediaItem = mediaArray[index];
     
     if (!mediaItem) {
-      console.error('❌ Media item not found at index:', index);
       return res.status(404).json({ message: 'Media not found at specified index' });
     }
 
-    console.log('✅ Media item found:', {
-      type: mediaItem.type,
-      fileName: mediaItem.fileName,
-      url: mediaItem.url?.substring(0, 50) + '...'
-    });
-
-    // ✅ OPTION 1: Return URL with download info (frontend handles download via fetch)
-    // This is better for CORS and works with Cloudinary
     res.json({
       url: mediaItem.url,
       fileName: mediaItem.fileName || `hobbysphere-${Date.now()}.${getFileExtension(mediaItem)}`,
@@ -333,7 +286,6 @@ exports.downloadMedia = async (req, res) => {
   }
 };
 
-// Helper function to get file extension
 const getFileExtension = (mediaItem) => {
   if (mediaItem.fileName) {
     const ext = mediaItem.fileName.split('.').pop();
@@ -351,25 +303,17 @@ const getFileExtension = (mediaItem) => {
   return typeMap[mediaItem.type] || 'bin';
 };
 
-/* =====================================================
-   GET SINGLE POST BY ID - FOR SHARED LINKS
-===================================================== */
 exports.getPostById = async (req, res) => {
   try {
     const { postId } = req.params;
-    
-    console.log('📖 Fetching post:', postId);
     
     const post = await Post.findById(postId)
       .populate('author', 'username fullName profileImage')
       .populate('community', 'name slug _id');
 
     if (!post) {
-      console.error('❌ Post not found:', postId);
       return res.status(404).json({ message: 'Post not found' });
     }
-
-    console.log('✅ Post found:', post.content.substring(0, 50) + '...');
 
     res.json(post);
   } catch (error) {
