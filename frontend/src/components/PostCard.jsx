@@ -239,22 +239,31 @@ const PostCard = memo(({ post, currentUser, onDelete, isSeen, isMember = true })
     }
   }, [post._id]);
 
-  const renderContent = useCallback((text) =>
-    text.split(/(#\w+)/g).map((part, i) => {
-      if (part.startsWith('#')) {
-        const tag = part.substring(1);
-        return (
-          <span
-            key={i}
-            onClick={() => navigate(`/hashtag/${encodeURIComponent(tag)}`)}
-            className="text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-          >
-            {part}
-          </span>
-        );
-      }
-      return <span key={i}>{part}</span>;
-    }), [navigate]);
+  const renderContent = useCallback((text) => {
+    // Split by newlines first to preserve line breaks
+    const lines = text.split('\n');
+    
+    return lines.map((line, lineIndex) => (
+      <React.Fragment key={`line-${lineIndex}`}>
+        {line.split(/(#\w+)/g).map((part, i) => {
+          if (part.startsWith('#')) {
+            const tag = part.substring(1);
+            return (
+              <span
+                key={i}
+                onClick={() => navigate(`/hashtag/${encodeURIComponent(tag)}`)}
+                className="text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+              >
+                {part}
+              </span>
+            );
+          }
+          return <span key={i}>{part}</span>;
+        })}
+        {lineIndex < lines.length - 1 && <br />}
+      </React.Fragment>
+    ));
+  }, [navigate]);
 
   const isPostAuthor = post.author._id?.toString() === userId || post.author._id === userId;
 

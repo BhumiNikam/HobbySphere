@@ -331,7 +331,7 @@ export default function CommentSection({
                         )}
                       </div>
 
-                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed break-words">
+                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed break-words whitespace-pre-wrap">
                         {comment.text}
                       </p>
                     </div>
