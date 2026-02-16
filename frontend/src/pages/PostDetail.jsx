@@ -73,11 +73,19 @@ export default function PostDetail() {
     );
   }
 
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto px-4 py-6">
       {/* Back Button */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={handleBack}
         className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 mb-6 transition-colors"
       >
         <ArrowLeft size={20} />
