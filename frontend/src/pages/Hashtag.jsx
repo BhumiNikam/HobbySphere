@@ -59,27 +59,28 @@ export default function Hashtag() {
 
   return (
     <div className="w-full space-y-8 py-6 relative">
+      {/* BACK BUTTON - Top Right */}
+      <button
+        aria-label="Close"
+        onClick={() => safeNavigateBack(navigate)}
+        className="absolute top-4 right-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
+        title="Go back"
+      >
+        <X size={24} className="text-slate-700 dark:text-slate-300" />
+      </button>
+
       {/* HEADER */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
-        <div className="flex items-center gap-4 justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <Hash size={28} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">#{tag}</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">
-                {posts.length} posts
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <Hash size={28} className="text-white" />
           </div>
-          <button
-            aria-label="Close"
-            onClick={() => safeNavigateBack(navigate)}
-            className="ml-auto p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm"
-          >
-            <X size={24} className="text-slate-700 dark:text-slate-300" />
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">#{tag}</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
+              {posts.length} posts
+            </p>
+          </div>
         </div>
       </div>
 

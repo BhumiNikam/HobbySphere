@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import PostCard from '../components/PostCard';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import API from '../services/api';
 import toast from 'react-hot-toast';
 import { safeNavigateBack } from '../utils/navigation';
@@ -75,14 +75,14 @@ export default function PostDetail() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-6">
-      {/* Back Button */}
+    <div className="w-full max-w-2xl mx-auto px-4 py-6 relative">
+      {/* BACK BUTTON - Top Right */}
       <button
         onClick={() => safeNavigateBack(navigate)}
-        className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 mb-6 transition-colors"
+        className="absolute top-4 right-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
+        title="Go back"
       >
-        <ArrowLeft size={20} />
-        <span className="font-medium">Back</span>
+        <X size={20} className="text-slate-700 dark:text-slate-300" />
       </button>
 
       {/* Post Card */}

@@ -208,7 +208,16 @@ export default function Communities() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
+    <div className="max-w-6xl mx-auto px-4 py-10 relative">
+      {/* BACK BUTTON - Top Right */}
+      <button
+        onClick={() => safeNavigateBack(navigate)}
+        className="absolute top-4 right-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-md dark:shadow-xl border border-slate-200 dark:border-slate-700"
+        title="Go back"
+      >
+        <X size={24} className="text-slate-700 dark:text-slate-300" />
+      </button>
+
       <div className="flex items-center justify-between mb-10">
         <div className="flex-1">
           <h1 className="text-3xl font-bold gradient-text">
@@ -223,14 +232,6 @@ export default function Communities() {
           <Link to="/communities/create" className="btn-gradient ripple flex-shrink-0 hidden sm:flex">
             + Create Community
           </Link>
-          
-          <button
-            onClick={() => safeNavigateBack(navigate)}
-            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
-            title="Go back"
-          >
-            <X size={24} className="text-slate-700 dark:text-slate-300" />
-          </button>
         </div>
       </div>
 
