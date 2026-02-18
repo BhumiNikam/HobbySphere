@@ -5,6 +5,8 @@ export const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,7 @@ export const AuthProvider = ({ children }) => {
       const updatedUser = res.data.user;
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('loginTime', Date.now().toString());
       return updatedUser;
     } catch (error) {
       console.error('Failed to refresh user:', error);
@@ -22,44 +25,69 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const clearSession = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('loginTime');
+    setUser(null);
+  };
+
+  const isSessionExpired = () => {
+    const loginTime = localStorage.getItem('loginTime');
+    if (!loginTime) return true;
+    return Date.now() - parseInt(loginTime) > SESSION_DURATION;
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    
+
     if (token && storedUser) {
-      // ✅ INSTANT load from localStorage
+      // ✅ Check if session expired (24 hours)
+      if (isSessionExpired()) {
+        clearSession();
+        setLoading(false);
+        return;
+      }
+
       try {
         setUser(JSON.parse(storedUser));
       } catch (e) {
-        console.error('Failed to parse stored user:', e);
+        clearSession();
+        setLoading(false);
+        return;
       }
       setLoading(false);
-      
-      // ✅ SILENT background refresh (don't block UI)
+
+      // ✅ Validate token with backend silently
       refreshUser().catch(() => {
-        // If refresh fails, keep cached user
+        clearSession();
       });
-    } else if (token) {
-      // No cached user, must fetch
-      API.get('/auth/me')
-        .then(res => {
-          setUser(res.data.user);
-          localStorage.setItem('user', JSON.stringify(res.data.user));
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        })
-        .finally(() => setLoading(false));
     } else {
+      clearSession();
       setLoading(false);
     }
+  }, []);
+
+  // ✅ Check session on tab focus
+  useEffect(() => {
+    const handleFocus = () => {
+      const token = localStorage.getItem('token');
+      if (token && isSessionExpired()) {
+        clearSession();
+        window.location.href = '/login';
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const login = async (email, password) => {
     const res = await API.post('/auth/login', { email, password });
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
+    localStorage.setItem('loginTime', Date.now().toString());
     setUser(res.data.user);
   };
 
@@ -67,6 +95,7 @@ export const AuthProvider = ({ children }) => {
     const res = await API.post('/auth/register', userData);
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
+    localStorage.setItem('loginTime', Date.now().toString());
     setUser(res.data.user);
   };
 
@@ -76,9 +105,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout cleanup failed:', error);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
+      clearSession();
       window.location.href = '/login';
     }
   };

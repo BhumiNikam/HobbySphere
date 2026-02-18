@@ -2,14 +2,11 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  timeout: 30000, // ✅ 30s timeout for cold starts
+  timeout: 30000,
 });
 
-// ✅ REQUEST CACHE - prevents duplicate requests
 const requestCache = new Map();
-const CACHE_DURATION = 60000; // 1 minute
-
-// ✅ REQUEST DEDUPLICATION - prevents multiple identical requests
+const CACHE_DURATION = 60000;
 const pendingRequests = new Map();
 
 API.interceptors.request.use(
@@ -19,11 +16,9 @@ API.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // ✅ Add cache key for GET requests
     if (config.method === 'get') {
       const cacheKey = `${config.url}?${JSON.stringify(config.params)}`;
       
-      // Check cache
       const cached = requestCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         config.adapter = () => Promise.resolve({
@@ -36,7 +31,6 @@ API.interceptors.request.use(
         return config;
       }
 
-      // ✅ Deduplicate pending requests
       if (pendingRequests.has(cacheKey)) {
         config.adapter = () => pendingRequests.get(cacheKey);
         return config;
@@ -50,7 +44,6 @@ API.interceptors.request.use(
 
 API.interceptors.response.use(
   (response) => {
-    // ✅ Cache successful GET responses
     if (response.config.method === 'get' && response.status === 200) {
       const cacheKey = `${response.config.url}?${JSON.stringify(response.config.params)}`;
       requestCache.set(cacheKey, {
@@ -62,16 +55,23 @@ API.interceptors.response.use(
     return response;
   },
   (error) => {
-    // ✅ Clear failed requests from pending
     if (error.config?.method === 'get') {
       const cacheKey = `${error.config.url}?${JSON.stringify(error.config.params)}`;
       pendingRequests.delete(cacheKey);
     }
+
+    // ✅ Auto logout on 401 (expired/invalid token)
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('loginTime');
+      window.location.href = '/login';
+    }
+
     return Promise.reject(error);
   }
 );
 
-// ✅ Clear cache function (call after mutations)
 export const clearCache = (pattern) => {
   if (!pattern) {
     requestCache.clear();

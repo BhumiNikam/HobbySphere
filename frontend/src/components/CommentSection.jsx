@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Trash2, Send, MessageCircle, Heart, MoreVertical } from 'lucide-react';
+import { Trash2, Send, MessageCircle, MoreVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../context/SocketContext';
 import API from '../services/api';
@@ -30,10 +30,13 @@ export default function CommentSection({
 
     const handleCommentAdded = ({ postId: eventPostId, comment, commentsCount }) => {
       if (eventPostId === postId) {
-        setComments((prev) => {
-          if (prev.some(c => c._id === comment._id)) return prev;
-          return [comment, ...prev];
-        });
+        // ✅ FIX: Only add if from another user
+        if (comment.author._id !== currentUser?._id) {
+          setComments((prev) => {
+            if (prev.some(c => c._id === comment._id)) return prev;
+            return [comment, ...prev];
+          });
+        }
         setCommentCount(commentsCount);
       }
     };
@@ -52,7 +55,7 @@ export default function CommentSection({
       socket.off('post_commented', handleCommentAdded);
       socket.off('comment_deleted', handleCommentDeleted);
     };
-  }, [socket, postId]);
+  }, [socket, postId, currentUser]);
 
   /* ================= FETCH COMMENTS ================= */
   useEffect(() => {
@@ -87,13 +90,19 @@ export default function CommentSection({
     if (!newComment.trim()) return;
 
     setLoading(true);
+    const loadingToast = toast.loading('Adding comment...');
+    
     try {
       const res = await API.post(`/posts/${postId}/comments`, { text: newComment });
+      
+      // ✅ FIX: Add to local state immediately
       setComments((prev) => [res.data, ...prev]);
+      setCommentCount(prev => prev + 1);
       setNewComment('');
-      toast.success('Comment added', { duration: 2000 });
+      
+      toast.success('Comment added', { id: loadingToast, duration: 2000 });
     } catch (err) {
-      toast.error('Failed to add comment');
+      toast.error('Failed to add comment', { id: loadingToast });
     } finally {
       setLoading(false);
     }
@@ -107,7 +116,10 @@ export default function CommentSection({
     
     try {
       await API.delete(`/posts/comments/${commentToDelete}`);
+      
+      // ✅ FIX: Update local state immediately
       setComments((prev) => prev.filter((c) => c._id !== commentToDelete));
+      setCommentCount(prev => prev - 1);
       setExpandedMenuId(null);
       
       toast.success('Comment deleted', { id: loadingToast });
