@@ -19,7 +19,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/communities', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       const message = err.response?.data?.message || 'Login failed';
       toast.error(message);
@@ -33,17 +33,18 @@ export default function Login() {
     try {
       const res = await API.post('/auth/guest-login');
 
+      // ✅ FIX: Properly set in localStorage with loginTime
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
+      localStorage.setItem('loginTime', Date.now().toString());
 
       toast.success('👤 Logged in as Guest!');
-      navigate('/communities', { replace: true });
-
-      window.location.reload();
+      
+      // ✅ FIX: Navigate first, then reload
+      window.location.href = '/';
     } catch (err) {
       const message = err.response?.data?.message || 'Guest login failed';
       toast.error(message);
-    } finally {
       setGuestLoading(false);
     }
   };
@@ -125,7 +126,7 @@ export default function Login() {
               className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transform hover:scale-105 transition duration-200 shadow disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <UserCircle size={20} />
-              {guestLoading ? 'Loading...' : ' Continue as Guest'}
+              {guestLoading ? 'Loading...' : 'Continue as Guest'}
             </button>
 
             <div className="text-center">
