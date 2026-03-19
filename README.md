@@ -2,7 +2,7 @@
 
 A full-stack real-time social platform where users can create communities, share posts, like, comment, and chat — built with modern web technologies and deployed to production.
 
-🔗 Live Demo: https://hobby-community-app.vercel.app/
+🔗 Live Demo: https://hobbysphere.in/
 
 🚀 Features  
 🔐 JWT-based Authentication  
