@@ -31,21 +31,46 @@ export default function Login() {
   const handleGuestLogin = async () => {
     setGuestLoading(true);
     try {
-      const res = await API.post('/auth/guest-login');
+      // 10s timeout — handles cold server start without hanging silently
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      // ✅ FIX: Properly set in localStorage with loginTime
+      const res = await API.post('/auth/guest-login', {}, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       localStorage.setItem('loginTime', Date.now().toString());
 
       toast.success('👤 Logged in as Guest!');
-      
-      // ✅ FIX: Navigate first, then reload
       window.location.href = '/';
+
     } catch (err) {
-      const message = err.response?.data?.message || 'Guest login failed';
-      toast.error(message);
-      setGuestLoading(false);
+      // Axios wraps AbortController errors as CanceledError
+      const isTimeout = err.name === 'CanceledError' || err.code === 'ERR_CANCELED';
+
+      if (isTimeout) {
+        // Server was slow (cold start / first request) — auto retry once
+        toast.loading('Almost there, retrying...', { id: 'guest-retry' });
+        try {
+          const res = await API.post('/auth/guest-login');
+          localStorage.setItem('token', res.data.token);
+          localStorage.setItem('user', JSON.stringify(res.data.user));
+          localStorage.setItem('loginTime', Date.now().toString());
+          toast.dismiss('guest-retry');
+          toast.success('👤 Logged in as Guest!');
+          window.location.href = '/';
+        } catch (retryErr) {
+          toast.dismiss('guest-retry');
+          toast.error(retryErr.response?.data?.message || 'Guest login failed. Please try again.');
+          setGuestLoading(false);
+        }
+      } else {
+        toast.error(err.response?.data?.message || 'Guest login failed');
+        setGuestLoading(false);
+      }
     }
   };
 
@@ -126,7 +151,7 @@ export default function Login() {
               className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transform hover:scale-105 transition duration-200 shadow disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <UserCircle size={20} />
-              {guestLoading ? 'Loading...' : 'Continue as Guest'}
+              {guestLoading ? 'Setting up guest account...' : 'Continue as Guest'}
             </button>
 
             <div className="text-center">

@@ -60,8 +60,30 @@ const postLimiter = rateLimit({
   },
 });
 
+/* ===============================
+   GUEST LOGIN LIMITER
+   Separate from authLimiter because:
+   - Guest accounts have no sensitive data to brute-force
+   - skipSuccessfulRequests: false ensures a client timeout + retry
+     doesn't eat into the limit and cause a false "too many attempts"
+   - Higher max allows normal demo/testing traffic
+================================ */
+const guestLimiter = rateLimit({
+  ...commonOptions,
+  windowMs: 60 * 1000, // 1 minute window
+  max: isDevelopment ? 100 : 20, // 20 guest logins/min is plenty in prod
+  skipSuccessfulRequests: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      message: 'Too many guest login attempts. Please wait a moment.',
+      retryAfter: 60,
+    });
+  },
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
   postLimiter,
+  guestLimiter,
 };

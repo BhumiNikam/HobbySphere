@@ -31,6 +31,21 @@ const validatePassword = (password) => {
   return null; // Valid password
 };
 
+// ─── Guest hash cache ────────────────────────────────────────────────────────
+// Pre-compute bcrypt hash once at startup using only 4 rounds.
+// Guest passwords are throwaway — speed matters, not security strength.
+// This eliminates the 1–3s bcrypt delay on the first guest login request.
+const GUEST_PASSWORD = 'Guest@123';
+let _cachedGuestHash = null;
+const _getGuestHash = async () => {
+  if (!_cachedGuestHash) {
+    _cachedGuestHash = await bcrypt.hash(GUEST_PASSWORD, 4);
+  }
+  return _cachedGuestHash;
+};
+_getGuestHash().catch(() => {}); // warm up on module load, ignore errors
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Register
 exports.register = async (req, res) => {
   try {
@@ -138,18 +153,18 @@ exports.login = async (req, res) => {
 // Guest Login - Create unique temporary guest account
 exports.guestLogin = async (req, res) => {
   try {
-    // Generate random guest ID
-    const randomId = Math.floor(10000 + Math.random() * 90000);
+    // Use crypto for a unique 6-char hex ID (collision-safe)
+    const randomId = crypto.randomBytes(3).toString('hex');
     const guestEmail = `guest_${randomId}@hobbysphere.com`;
-    const guestPassword = 'Guest@123';
 
-    // Create new guest account
-    const hashedPassword = await bcrypt.hash(guestPassword, 10);
+    // Use pre-cached hash — no bcrypt cost on this request
+    const hashedPassword = await _getGuestHash();
+
     const guestUser = await User.create({
       username: `guest_${randomId}`,
       email: guestEmail,
       password: hashedPassword,
-      fullName: `Guest ${randomId}`,
+      fullName: 'Guest User',
       bio: '👤 Temporary Guest Account',
       isGuest: true
     });
