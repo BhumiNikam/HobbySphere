@@ -10,7 +10,7 @@
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-Real--Time-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io)
 [![Cloudinary](https://img.shields.io/badge/Cloudinary-Media-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com)
 
-🔗 **Live Demo:** [https://hobbysphere.in/](https://hobbysphere.in/)
+### 🌐 [Live Demo → www.hobbysphere.in](https://www.hobbysphere.in)
 
 </div>
 
