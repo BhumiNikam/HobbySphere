@@ -56,7 +56,7 @@ const sendWelcomeEmail = async (email, fullName) => {
             
             <p>Ready to dive in? Start by creating your first post and connecting with the community!</p>
             
-            <a href="http://localhost:5173/feed" class="button">Go to Feed</a>
+            <a href="${process.env.FRONTEND_URL || 'https://www.hobbysphere.in'}/feed" class="button">Go to Feed</a>
             
             <p style="margin-top: 30px;">Happy exploring! 🎉</p>
             <p><strong>The HobbySphere Team</strong></p>
@@ -81,7 +81,7 @@ const sendWelcomeEmail = async (email, fullName) => {
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, fullName, resetToken) => {
-  const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+  const resetUrl = `${process.env.FRONTEND_URL || 'https://www.hobbysphere.in'}/reset-password/${resetToken}`;
   
   const mailOptions = {
     from: `${process.env.EMAIL_FROM} <${process.env.EMAIL_USER}>`,
