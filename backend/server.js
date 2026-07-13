@@ -119,14 +119,11 @@ app.get('/', (req, res) => {
 
 app.get("/test-email", async (req, res) => {
   const { sendPasswordResetEmail } = require("./services/emailService");
+  const toEmail = req.query.email || "aniketkasav07@gmail.com";
 
   try {
-    await sendPasswordResetEmail(
-      "aniketkasav07@gmail.com",
-      "Aniket",
-      "Hashed-07"
-    );
-    res.send("Email sent");
+    await sendPasswordResetEmail(toEmail, "HobbySphere User", "test-token-123");
+    res.send(`Email sent to ${toEmail}`);
   } catch (err) {
     console.error(err);
     res.status(500).send("Email failed");
