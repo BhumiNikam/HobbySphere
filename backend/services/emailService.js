@@ -3,8 +3,8 @@ const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = process.env.EMAIL_FROM
-  ? `${process.env.EMAIL_FROM} <onboarding@resend.dev>`
-  : "HobbySphere <onboarding@resend.dev>";
+  ? `${process.env.EMAIL_FROM} <no-reply@hobbysphere.in>`
+  : "HobbySphere <no-reply@hobbysphere.in>";
 
 const FRONTEND_URL =
   process.env.FRONTEND_URL || "https://www.hobbysphere.in";
